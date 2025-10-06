@@ -239,6 +239,9 @@ async function handleModalSubmit(interaction) {
     try {
         if (interaction.customId !== 'trade_modal') return;
         
+        // Deferir respuesta para evitar timeout
+        await interaction.deferReply({ flags: 64 }); // 64 = EPHEMERAL
+        
         const userState = interactionState.get(interaction.user.id);
         
         if (!userState || !userState.asset || !userState.orderType) {

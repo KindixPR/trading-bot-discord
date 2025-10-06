@@ -347,12 +347,14 @@ async function handleModalSubmit(interaction) {
     try {
         if (interaction.customId !== 'update_notes_modal') return;
         
+        // Deferir respuesta para evitar timeout
+        await interaction.deferReply({ flags: 64 }); // 64 = EPHEMERAL
+        
         const userState = updateInteractionState.get(interaction.user.id);
         
         if (!userState || !userState.operationId) {
-            await interaction.reply({
-                content: '❌ Error: No se encontró la operación seleccionada. Por favor, inicia el proceso nuevamente con `/update`.',
-                flags: 64 // 64 = EPHEMERAL
+            await interaction.editReply({
+                content: '❌ Error: No se encontró la operación seleccionada. Por favor, inicia el proceso nuevamente con `/update`.'
             });
             return;
         }
@@ -361,9 +363,8 @@ async function handleModalSubmit(interaction) {
         const customNotes = interaction.fields.getTextInputValue('custom_notes');
         
         if (!customNotes || customNotes.trim().length === 0) {
-            await interaction.reply({
-                content: '❌ Error: Debes escribir un mensaje personalizado.',
-                flags: 64 // 64 = EPHEMERAL
+            await interaction.editReply({
+                content: '❌ Error: Debes escribir un mensaje personalizado.'
             });
             return;
         }
@@ -374,9 +375,8 @@ async function handleModalSubmit(interaction) {
         });
         
         if (!updatedOperation) {
-            await interaction.reply({
-                content: '❌ Error: No se pudo actualizar la operación.',
-                flags: 64 // 64 = EPHEMERAL
+            await interaction.editReply({
+                content: '❌ Error: No se pudo actualizar la operación.'
             });
             return;
         }
@@ -400,9 +400,8 @@ async function handleModalSubmit(interaction) {
         updateInteractionState.delete(interaction.user.id);
         
         // Primero confirmar privadamente
-        await interaction.reply({
-            content: '✅ **Mensaje personalizado enviado exitosamente!**',
-            flags: 64 // 64 = EPHEMERAL
+        await interaction.editReply({
+            content: '✅ **Mensaje personalizado enviado exitosamente!**'
         });
 
         // Luego enviar al canal público
@@ -419,9 +418,8 @@ async function handleModalSubmit(interaction) {
         logger.error('Error en handleModalSubmit (update):', error);
         
         try {
-            await interaction.reply({
-                content: '❌ Error: Hubo un problema al procesar las notas personalizadas.',
-                flags: 64 // 64 = EPHEMERAL
+            await interaction.editReply({
+                content: '❌ Error: Hubo un problema al procesar las notas personalizadas.'
             });
         } catch (replyError) {
             logger.error('Error al responder en handleModalSubmit (update):', replyError);
