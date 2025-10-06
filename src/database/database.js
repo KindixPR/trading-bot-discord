@@ -25,13 +25,17 @@ class Database {
 
     async initialize() {
         return new Promise((resolve, reject) => {
+            logger.info(`Intentando conectar a la base de datos: ${this.dbPath}`);
             this.db = new sqlite3.Database(this.dbPath, (err) => {
                 if (err) {
                     logger.error('Error conectando a la base de datos:', err);
                     reject(err);
                 } else {
-                    logger.info(`Conectado a la base de datos: ${this.dbPath}`);
-                    this.createTables().then(resolve).catch(reject);
+                    logger.info(`Conectado exitosamente a la base de datos: ${this.dbPath}`);
+                    this.createTables().then(() => {
+                        logger.info('Tablas creadas/verificadas, base de datos lista');
+                        resolve();
+                    }).catch(reject);
                 }
             });
         });
@@ -192,13 +196,26 @@ class Database {
     }
 
     async getActiveOperations() {
-        const query = "SELECT * FROM trading_operations WHERE status IN ('OPEN', 'BE', 'TP1', 'TP2', 'TP3') ORDER BY created_at DESC";
-        const operations = await this.all(query);
-        logger.info(`getActiveOperations: Encontradas ${operations ? operations.length : 0} operaciones activas`);
-        if (operations && operations.length > 0) {
-            logger.info(`Primera operación: ${JSON.stringify(operations[0])}`);
+        try {
+            // Primero intentar con query simple
+            const simpleQuery = "SELECT * FROM trading_operations WHERE status = 'OPEN' ORDER BY created_at DESC";
+            const simpleOps = await this.all(simpleQuery);
+            logger.info(`getActiveOperations (OPEN only): ${simpleOps ? simpleOps.length : 0} operaciones`);
+            
+            // Luego con query completa
+            const query = "SELECT * FROM trading_operations WHERE status IN ('OPEN', 'BE', 'TP1', 'TP2', 'TP3') ORDER BY created_at DESC";
+            const operations = await this.all(query);
+            logger.info(`getActiveOperations (all active): ${operations ? operations.length : 0} operaciones activas`);
+            
+            if (operations && operations.length > 0) {
+                logger.info(`Primera operación: ${JSON.stringify(operations[0])}`);
+            }
+            
+            return operations;
+        } catch (error) {
+            logger.error('Error en getActiveOperations:', error);
+            return [];
         }
-        return operations;
     }
 
     async getOperationsByAsset(asset) {
@@ -224,24 +241,59 @@ class Database {
     // Función de debugging para verificar el estado de la base de datos
     async debugDatabase() {
         try {
+            logger.info('=== DEBUG DATABASE START ===');
+            
+            // Verificar conexión
+            if (!this.db) {
+                logger.error('Base de datos no está conectada');
+                return;
+            }
+            
+            // Verificar si la tabla existe
+            const tableCheck = await this.get("SELECT name FROM sqlite_master WHERE type='table' AND name='trading_operations'");
+            logger.info(`Tabla trading_operations existe: ${!!tableCheck}`);
+            
+            // Contar registros totales
+            const countResult = await this.get("SELECT COUNT(*) as count FROM trading_operations");
+            logger.info(`Total registros en trading_operations: ${countResult ? countResult.count : 0}`);
+            
+            // Obtener todas las operaciones
             const allOps = await this.getAllOperations();
+            logger.info(`getAllOperations() devolvió: ${allOps ? allOps.length : 'null/undefined'} operaciones`);
+            
+            // Obtener operaciones activas
             const activeOps = await this.getActiveOperations();
+            logger.info(`getActiveOperations() devolvió: ${activeOps ? activeOps.length : 'null/undefined'} operaciones`);
+            
+            // Obtener operaciones cerradas
             const closedOps = await this.getClosedOperations();
+            logger.info(`getClosedOperations() devolvió: ${closedOps ? closedOps.length : 'null/undefined'} operaciones`);
             
-            logger.info('=== DEBUG DATABASE ===');
-            logger.info(`Total operaciones: ${allOps ? allOps.length : 0}`);
-            logger.info(`Operaciones activas: ${activeOps ? activeOps.length : 0}`);
-            logger.info(`Operaciones cerradas: ${closedOps ? closedOps.length : 0}`);
-            
+            // Mostrar estructura de la primera operación si existe
             if (allOps && allOps.length > 0) {
-                logger.info('Estados de operaciones:');
+                logger.info('Primera operación encontrada:');
+                logger.info(JSON.stringify(allOps[0], null, 2));
+                
+                // Contar por estado
                 const statusCounts = {};
                 allOps.forEach(op => {
                     statusCounts[op.status] = (statusCounts[op.status] || 0) + 1;
                 });
+                logger.info('Conteo por estado:');
                 logger.info(JSON.stringify(statusCounts, null, 2));
+            } else {
+                logger.warn('No se encontraron operaciones en la base de datos');
+                
+                // Verificar si hay datos en la tabla directamente
+                const directQuery = await this.all("SELECT * FROM trading_operations LIMIT 5");
+                logger.info(`Query directo devolvió: ${directQuery ? directQuery.length : 'null/undefined'} registros`);
+                if (directQuery && directQuery.length > 0) {
+                    logger.info('Primer registro de query directo:');
+                    logger.info(JSON.stringify(directQuery[0], null, 2));
+                }
             }
-            logger.info('=== END DEBUG ===');
+            
+            logger.info('=== DEBUG DATABASE END ===');
         } catch (error) {
             logger.error('Error en debugDatabase:', error);
         }
@@ -250,6 +302,34 @@ class Database {
     async getOperationUpdates(operationId) {
         const query = 'SELECT * FROM operation_updates WHERE operation_id = ? ORDER BY updated_at DESC';
         return await this.all(query, [operationId]);
+    }
+
+    // Función específica para debugging de operaciones OPEN
+    async debugOpenOperations() {
+        try {
+            logger.info('=== DEBUG OPEN OPERATIONS ===');
+            
+            // Query directo para operaciones OPEN
+            const openQuery = "SELECT * FROM trading_operations WHERE status = 'OPEN' ORDER BY created_at DESC";
+            const openOps = await this.all(openQuery);
+            logger.info(`Query directo OPEN: ${openOps ? openOps.length : 'null/undefined'} operaciones`);
+            
+            // Query para todas las operaciones con estado
+            const allStatusQuery = "SELECT operation_id, status, asset, order_type, created_at FROM trading_operations ORDER BY created_at DESC";
+            const allStatusOps = await this.all(allStatusQuery);
+            logger.info(`Todas las operaciones con estado: ${allStatusOps ? allStatusOps.length : 'null/undefined'}`);
+            
+            if (allStatusOps && allStatusOps.length > 0) {
+                logger.info('Todas las operaciones encontradas:');
+                allStatusOps.forEach((op, index) => {
+                    logger.info(`${index + 1}. ID: ${op.operation_id}, Status: ${op.status}, Asset: ${op.asset}, Type: ${op.order_type}, Created: ${op.created_at}`);
+                });
+            }
+            
+            logger.info('=== END DEBUG OPEN OPERATIONS ===');
+        } catch (error) {
+            logger.error('Error en debugOpenOperations:', error);
+        }
     }
 
     async logOperationUpdate(operationId, updateType, oldValue, newValue, notes, updatedBy) {

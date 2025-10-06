@@ -136,6 +136,7 @@ async function execute(interaction) {
         
         // Debug: Verificar estado de la base de datos
         await database.debugDatabase();
+        await database.debugOpenOperations();
         
         // Obtener operaciones abiertas
         const openOperations = await database.getActiveOperations();
