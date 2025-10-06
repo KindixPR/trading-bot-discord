@@ -552,9 +552,8 @@ async function handleModalSubmit(interaction) {
         const customNotes = interaction.fields.getTextInputValue('custom_notes');
         
         if (!customNotes || customNotes.trim().length === 0) {
-            await interaction.reply({
-                content: '❌ Error: Debes escribir un mensaje personalizado.',
-                flags: 64
+            await interaction.editReply({
+                content: '❌ Error: Debes escribir un mensaje personalizado.'
             });
             return;
         }
@@ -565,9 +564,8 @@ async function handleModalSubmit(interaction) {
         });
         
         if (!updatedOperation) {
-            await interaction.reply({
-                content: '❌ Error: No se pudo actualizar la operación.',
-                flags: 64
+            await interaction.editReply({
+                content: '❌ Error: No se pudo actualizar la operación.'
             });
             return;
         }
@@ -591,9 +589,8 @@ async function handleModalSubmit(interaction) {
         cleanupUpdateUserState(interaction.user.id);
         
         // Primero confirmar privadamente
-        await interaction.reply({
-            content: '✅ **Mensaje personalizado enviado exitosamente!**',
-            flags: 64
+        await interaction.editReply({
+            content: '✅ **Mensaje personalizado enviado exitosamente!**'
         });
 
         // Luego enviar al canal público
