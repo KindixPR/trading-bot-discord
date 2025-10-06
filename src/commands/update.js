@@ -375,8 +375,22 @@ async function handleModalSubmit(interaction) {
     try {
         if (interaction.customId !== 'update_notes_modal') return;
         
-        // Deferir respuesta para modal
-        await interaction.deferReply({ flags: 64 });
+        // Verificar si la interacción ya fue respondida
+        if (interaction.replied || interaction.deferred) {
+            logger.warn(`Interacción ya fue respondida para usuario ${interaction.user.tag}`);
+            return;
+        }
+        
+        // Deferir respuesta para modal con timeout
+        try {
+            await interaction.deferReply({ flags: 64 });
+        } catch (error) {
+            if (error.code === 10062) {
+                logger.warn(`Interacción expirada para usuario ${interaction.user.tag}`);
+                return;
+            }
+            throw error;
+        }
         
         const userState = updateInteractionState.get(interaction.user.id);
         

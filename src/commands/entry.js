@@ -253,8 +253,22 @@ async function handleModalSubmit(interaction) {
     try {
         if (interaction.customId !== 'trade_modal') return;
         
-        // Deferir respuesta para modal
-        await interaction.deferReply({ flags: 64 });
+        // Verificar si la interacción ya fue respondida
+        if (interaction.replied || interaction.deferred) {
+            logger.warn(`Interacción ya fue respondida para usuario ${interaction.user.tag}`);
+            return;
+        }
+        
+        // Deferir respuesta para modal con timeout
+        try {
+            await interaction.deferReply({ flags: 64 });
+        } catch (error) {
+            if (error.code === 10062) {
+                logger.warn(`Interacción expirada para usuario ${interaction.user.tag}`);
+                return;
+            }
+            throw error;
+        }
         
         const userState = interactionState.get(interaction.user.id);
         
@@ -320,6 +334,11 @@ async function handleModalSubmit(interaction) {
             status: 'OPEN',
             createdBy: interaction.user.id
         };
+
+        // Responder inmediatamente para evitar timeout
+        await interaction.editReply({
+            content: '⏳ **Procesando operación...**'
+        });
 
         // Guardar en la base de datos
         const savedOperation = await database.createOperation(operationData);
