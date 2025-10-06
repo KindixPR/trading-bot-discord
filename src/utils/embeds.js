@@ -8,7 +8,7 @@ moment.locale('es');
 
 // Función helper para obtener timestamp para Discord
 function getDiscordTimestamp() {
-    return new Date(); // Discord maneja el formato automáticamente
+    return new Date().toISOString(); // Discord requiere ISO string
 }
 
 // Función helper para formatear fecha en formato de 12 horas (para campos de texto)
