@@ -22,6 +22,9 @@ const permissions = ['ADMINISTRATOR'];
 // Store para mantener el estado de las interacciones
 const updateInteractionState = new Map();
 
+// Sistema de locks por usuario para prevenir conflictos
+const updateUserLocks = new Map();
+
 // Función para generar mensajes específicos por estado
 function getStatusMessage(status, operation) {
     const assetInfo = getAssetInfo(operation.asset);
@@ -74,6 +77,22 @@ function getStatusMessage(status, operation) {
 }
 
 async function execute(interaction) {
+    const userId = interaction.user.id;
+    
+    // Verificar si el usuario ya tiene un lock activo
+    if (updateUserLocks.has(userId)) {
+        logger.warn(`Usuario ${interaction.user.tag} intentó ejecutar /update mientras ya está en proceso`);
+        try {
+            await interaction.reply({ content: '⏳ Ya tienes una actualización en proceso. Espera a que termine.', ephemeral: true });
+        } catch (error) {
+            logger.error('Error respondiendo a usuario bloqueado:', error);
+        }
+        return;
+    }
+    
+    // Crear lock para el usuario
+    updateUserLocks.set(userId, Date.now());
+    
     try {
         // Deferir respuesta para evitar timeout
         await interaction.deferReply({ flags: 64 }); // 64 = EPHEMERAL
@@ -154,6 +173,12 @@ async function execute(interaction) {
             logger.error('Error al responder en update interactivo:', replyError);
             // NO intentar responder aquí para evitar doble respuesta
         }
+    } finally {
+        // Limpiar el lock del usuario después de 30 segundos
+        setTimeout(() => {
+            updateUserLocks.delete(userId);
+            updateInteractionState.delete(userId);
+        }, 30000);
     }
 }
 

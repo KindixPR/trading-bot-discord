@@ -16,8 +16,8 @@ import { logTradingOperation, logTradingError, logger } from '../utils/logger.js
 // Mapa para almacenar el estado de la interacción por usuario
 const interactionState = new Map();
 
-// Mapa para prevenir ejecuciones múltiples
-const processingUsers = new Set();
+// Sistema de locks por usuario para prevenir conflictos
+const userLocks = new Map();
 
 const data = new SlashCommandBuilder()
     .setName('entry')
@@ -26,13 +26,21 @@ const data = new SlashCommandBuilder()
 const permissions = ['ADMINISTRATOR'];
 
 async function execute(interaction) {
-    // Prevenir ejecuciones múltiples
-    if (processingUsers.has(interaction.user.id)) {
+    const userId = interaction.user.id;
+    
+    // Verificar si el usuario ya tiene un lock activo
+    if (userLocks.has(userId)) {
         logger.warn(`Usuario ${interaction.user.tag} intentó ejecutar /entry mientras ya está en proceso`);
+        try {
+            await interaction.reply({ content: '⏳ Ya tienes una operación en proceso. Espera a que termine.', ephemeral: true });
+        } catch (error) {
+            logger.error('Error respondiendo a usuario bloqueado:', error);
+        }
         return;
     }
     
-    processingUsers.add(interaction.user.id);
+    // Crear lock para el usuario
+    userLocks.set(userId, Date.now());
     
     try {
         // Deferir respuesta para evitar timeout
@@ -76,15 +84,24 @@ async function execute(interaction) {
         logger.error('Error en comando entry interactivo:', error);
         // NO intentar responder aquí para evitar doble respuesta
     } finally {
-        // Limpiar el estado de procesamiento después de 30 segundos
+        // Limpiar el lock del usuario después de 30 segundos
         setTimeout(() => {
-            processingUsers.delete(interaction.user.id);
+            userLocks.delete(userId);
+            interactionState.delete(userId);
         }, 30000);
     }
 }
 
 // Manejar interacciones de botones para entry
 async function handleButtonInteraction(interaction) {
+    const userId = interaction.user.id;
+    
+    // Verificar si el usuario tiene un lock activo
+    if (!userLocks.has(userId)) {
+        logger.warn(`Usuario ${interaction.user.tag} intentó usar botón sin lock activo`);
+        return;
+    }
+    
     try {
         const customId = interaction.customId;
         
@@ -317,8 +334,9 @@ async function handleModalSubmit(interaction) {
         // Crear embed de la operación
         const embed = createTradeEntryEmbed(operationData);
 
-        // Limpiar estado del usuario
+        // Limpiar estado del usuario y lock
         interactionState.delete(interaction.user.id);
+        userLocks.delete(interaction.user.id);
 
         // Primero confirmar privadamente
         await interaction.editReply({
