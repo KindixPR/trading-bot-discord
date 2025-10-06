@@ -284,7 +284,7 @@ async function handleButtonInteraction(interaction) {
     
     // Verificar el tipo de botón para decidir si hacer deferUpdate o no
     const customId = interaction.customId;
-    const needsDeferUpdate = !customId.includes('NOTES');
+    const needsDeferUpdate = !customId.includes('status_notes');
     
     // Solo hacer deferUpdate si no es un botón que lleva a modal
     if (needsDeferUpdate) {
