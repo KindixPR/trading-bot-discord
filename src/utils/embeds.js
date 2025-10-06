@@ -313,7 +313,7 @@ export function createActiveOperationsEmbed(operations) {
         
         embed.addFields({
             name: `${statusEmoji} ${operation.asset} - ${operation.order_type}`,
-            value: `**Estado:** ${operation.status}\n**Entrada:** ${operation.entry_price}\n**TP:** ${operation.take_profit || 'N/A'}\n**SL:** ${operation.stop_loss || 'N/A'}\n**ID:** \`${operation.operation_id}\``,
+            value: `**Estado:** ${operation.status}\n**Entrada:** ${operation.entry_price}\n**TP1:** ${operation.take_profit_1 || 'N/A'}\n**TP2:** ${operation.take_profit_2 || 'N/A'}\n**SL:** ${operation.stop_loss || 'N/A'}\n**ID:** \`${operation.operation_id}\``,
             inline: true
         });
     });

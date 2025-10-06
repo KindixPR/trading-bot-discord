@@ -152,7 +152,7 @@ class Database {
     }
 
     async updateOperation(operationId, updateData) {
-        const { status, takeProfit, stopLoss, notes } = updateData;
+        const { status, takeProfit1, takeProfit2, stopLoss, notes } = updateData;
         const setClause = [];
         const params = [];
         
@@ -160,9 +160,13 @@ class Database {
             setClause.push('status = ?');
             params.push(status);
         }
-        if (takeProfit !== undefined) {
-            setClause.push('take_profit = ?');
-            params.push(takeProfit);
+        if (takeProfit1 !== undefined) {
+            setClause.push('take_profit_1 = ?');
+            params.push(takeProfit1);
+        }
+        if (takeProfit2 !== undefined) {
+            setClause.push('take_profit_2 = ?');
+            params.push(takeProfit2);
         }
         if (stopLoss !== undefined) {
             setClause.push('stop_loss = ?');
