@@ -23,9 +23,10 @@ export const richPresenceConfig = {
         },
         {
             name: 'Vitaly Signals',
-            type: 'Watching',
+            type: 'Streaming',
             state: 'Análisis de Mercados',
-            emoji: '📺'
+            emoji: '📺',
+            url: 'https://instagram.com/5vitaly' // Link a tu Instagram
         },
         {
             name: 'Vitaly Signals',
@@ -106,7 +107,7 @@ export const richPresenceConfig = {
 
     // URLs personalizadas (opcional)
     customUrls: {
-        streaming: 'https://instagram.com/5vitaly',
+        streaming: 'https://instagram.com/5vitaly', // Link a tu Instagram cuando aparezca "Transmitiendo"
         website: 'https://instagram.com/5vitaly',
         support: 'https://instagram.com/5vitaly'
     }
