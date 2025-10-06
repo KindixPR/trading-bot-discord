@@ -213,17 +213,7 @@ async function handleButtonInteraction(interaction) {
 
             modal.addComponents(firstActionRow, secondActionRow, thirdActionRow, fourthActionRow, fifthActionRow);
 
-            // Mostrar modal
-            await interaction.editReply({ 
-                content: '📝 **Completa los detalles de la operación:**',
-                components: []
-            });
-            
-            await interaction.followUp({ 
-                content: '**Modal abierto** - Completa los campos y envía para crear la operación.',
-                flags: 64 // EPHEMERAL
-            });
-            
+            // Mostrar modal INMEDIATAMENTE después del deferUpdate
             await interaction.showModal(modal);
 
             logger.info(`Usuario ${interaction.user.tag} seleccionó tipo: ${orderType} para ${userState.asset}`);
