@@ -14,7 +14,7 @@ const permissions = ['ADMINISTRATOR'];
 async function execute(interaction) {
     try {
         // Deferir respuesta para evitar timeout
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: 64 }); // 64 = EPHEMERAL
         
         logger.info(`Comando /trades ejecutado por ${interaction.user.tag}`);
         
@@ -106,9 +106,9 @@ async function execute(interaction) {
         try {
             const embed = createErrorEmbed('Error', 'Hubo un error al obtener las operaciones. Por favor, inténtalo de nuevo.');
             if (interaction.replied || interaction.deferred) {
-                await interaction.followUp({ embeds: [embed], ephemeral: true });
+                await interaction.followUp({ embeds: [embed], flags: 64 // 64 = EPHEMERAL });
             } else {
-                await interaction.reply({ embeds: [embed], ephemeral: true });
+                await interaction.reply({ embeds: [embed], flags: 64 // 64 = EPHEMERAL });
             }
         } catch (replyError) {
             logger.error('Error al responder en trades:', replyError);

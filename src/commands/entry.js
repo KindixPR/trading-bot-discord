@@ -25,7 +25,7 @@ const permissions = ['ADMINISTRATOR'];
 async function execute(interaction) {
     try {
         // Deferir respuesta para evitar timeout
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: 64 }); // 64 = EPHEMERAL
         
         // Iniciar el proceso interactivo con la selección de activo
         const assetRow = new ActionRowBuilder()
@@ -65,9 +65,9 @@ async function execute(interaction) {
         logger.error('Error en comando entry interactivo:', error);
         const errorEmbed = createErrorEmbed('Error', 'Hubo un error al iniciar el proceso de entrada. Por favor, inténtalo de nuevo.');
         if (interaction.replied || interaction.deferred) {
-            await interaction.followUp({ embeds: [errorEmbed], ephemeral: true });
+            await interaction.followUp({ embeds: [errorEmbed], flags: 64 }); // 64 = EPHEMERAL
         } else {
-            await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+            await interaction.reply({ embeds: [errorEmbed], flags: 64 }); // 64 = EPHEMERAL
         }
     }
 }
@@ -220,7 +220,7 @@ async function handleButtonInteraction(interaction) {
             if (interaction.replied || interaction.deferred) {
                 await interaction.followUp({
                     content: '❌ Hubo un error procesando tu selección. Por favor, inténtalo de nuevo.',
-                    ephemeral: true
+                    flags: 64 // 64 = EPHEMERAL
                 });
             } else {
                 await interaction.update({
@@ -346,7 +346,7 @@ async function handleModalSubmit(interaction) {
             } else {
                 await interaction.reply({
                     content: '❌ Hubo un error creando la operación. Por favor, inténtalo de nuevo.',
-                    ephemeral: true
+                    flags: 64 // 64 = EPHEMERAL
                 });
             }
         } catch (replyError) {

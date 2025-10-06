@@ -76,7 +76,7 @@ function getStatusMessage(status, operation) {
 async function execute(interaction) {
     try {
         // Deferir respuesta para evitar timeout
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: 64 }); // 64 = EPHEMERAL
         
         logger.info(`Comando /update ejecutado por ${interaction.user.tag}`);
         
@@ -146,9 +146,9 @@ async function execute(interaction) {
         try {
             const embed = createErrorEmbed('Error', 'Hubo un error al iniciar el sistema de actualización. Por favor, inténtalo de nuevo.');
             if (interaction.replied || interaction.deferred) {
-                await interaction.followUp({ embeds: [embed], ephemeral: true });
+                await interaction.followUp({ embeds: [embed], flags: 64 // 64 = EPHEMERAL });
             } else {
-                await interaction.reply({ embeds: [embed], ephemeral: true });
+                await interaction.reply({ embeds: [embed], flags: 64 // 64 = EPHEMERAL });
             }
         } catch (replyError) {
             logger.error('Error al responder en update interactivo:', replyError);
@@ -328,7 +328,7 @@ async function handleButtonInteraction(interaction) {
             if (interaction.replied || interaction.deferred) {
                 await interaction.followUp({
                     content: '❌ Hubo un error procesando tu selección. Por favor, inténtalo de nuevo.',
-                    ephemeral: true
+                    flags: 64 // 64 = EPHEMERAL
                 });
             } else {
                 await interaction.update({
@@ -352,7 +352,7 @@ async function handleModalSubmit(interaction) {
         if (!userState || !userState.operationId) {
             await interaction.reply({
                 content: '❌ Error: No se encontró la operación seleccionada. Por favor, inicia el proceso nuevamente con `/update`.',
-                ephemeral: true
+                flags: 64 // 64 = EPHEMERAL
             });
             return;
         }
@@ -363,7 +363,7 @@ async function handleModalSubmit(interaction) {
         if (!customNotes || customNotes.trim().length === 0) {
             await interaction.reply({
                 content: '❌ Error: Debes escribir un mensaje personalizado.',
-                ephemeral: true
+                flags: 64 // 64 = EPHEMERAL
             });
             return;
         }
@@ -376,7 +376,7 @@ async function handleModalSubmit(interaction) {
         if (!updatedOperation) {
             await interaction.reply({
                 content: '❌ Error: No se pudo actualizar la operación.',
-                ephemeral: true
+                flags: 64 // 64 = EPHEMERAL
             });
             return;
         }
@@ -402,7 +402,7 @@ async function handleModalSubmit(interaction) {
         // Primero confirmar privadamente
         await interaction.reply({
             content: '✅ **Mensaje personalizado enviado exitosamente!**',
-            ephemeral: true
+            flags: 64 // 64 = EPHEMERAL
         });
 
         // Luego enviar al canal público
@@ -421,7 +421,7 @@ async function handleModalSubmit(interaction) {
         try {
             await interaction.reply({
                 content: '❌ Error: Hubo un problema al procesar las notas personalizadas.',
-                ephemeral: true
+                flags: 64 // 64 = EPHEMERAL
             });
         } catch (replyError) {
             logger.error('Error al responder en handleModalSubmit (update):', replyError);
