@@ -41,8 +41,8 @@ class TradingBot {
         this.client.once(Events.ClientReady, (readyClient) => {
             logger.info(`Bot conectado como ${readyClient.user.tag}`);
             
-            // Establecer actividad
-            this.client.user.setActivity('Trading Operations', { 
+            // Establecer actividad del bot - Más profesional
+            this.client.user.setActivity('BDX Traders - Micro Futures', { 
                 type: ActivityType.Watching 
             });
         });

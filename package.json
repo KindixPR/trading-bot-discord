@@ -22,10 +22,11 @@
   "author": "Hector A",
   "license": "MIT",
   "dependencies": {
+    "canvas": "^3.2.0",
     "discord.js": "^14.14.1",
-    "sqlite3": "^5.1.6",
     "dotenv": "^16.3.1",
     "moment": "^2.29.4",
+    "sqlite3": "^5.1.6",
     "winston": "^3.11.0"
   },
   "devDependencies": {

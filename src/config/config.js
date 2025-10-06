@@ -35,12 +35,14 @@ export const config = {
     },
     
     colors: {
-        success: parseInt(process.env.EMBED_COLOR_SUCCESS || '0x00ff00'),
-        error: parseInt(process.env.EMBED_COLOR_ERROR || '0xff0000'),
-        warning: parseInt(process.env.EMBED_COLOR_WARNING || '0xffaa00'),
-        info: parseInt(process.env.EMBED_COLOR_INFO || '0x0099ff'),
-        primary: 0x7289da,
-        secondary: 0x99aab5
+        success: parseInt(process.env.EMBED_COLOR_SUCCESS || '0x00d4aa'), // Verde profesional
+        error: parseInt(process.env.EMBED_COLOR_ERROR || '0xe74c3c'),     // Rojo elegante
+        warning: parseInt(process.env.EMBED_COLOR_WARNING || '0xf39c12'), // Naranja dorado
+        info: parseInt(process.env.EMBED_COLOR_INFO || '0x3498db'),       // Azul profesional
+        primary: 0x2c3e50,  // Azul oscuro elegante
+        secondary: 0x34495e, // Gris azulado
+        accent: 0x1abc9c,    // Verde azulado
+        gold: 0xffd700       // Dorado premium
     },
     
     trading: {

@@ -29,9 +29,14 @@ export function createTradeEntryEmbed(operation) {
     const assetEmoji = assetInfo?.emoji || '📊';
     const assetName = assetInfo?.name || asset;
     
+    // Colores más profesionales
+    const embedColor = orderType === 'BUY' ? config.colors.success : config.colors.error;
+    const typeEmoji = orderType === 'BUY' ? '🟢' : '🔴';
+    
     const embed = new EmbedBuilder()
-        .setTitle(`${assetEmoji} Nueva Operación - ${assetName} (${asset})`)
-        .setColor(orderType === 'BUY' ? config.colors.success : config.colors.error)
+        .setTitle(`${typeEmoji} ${assetEmoji} ${assetName} - Nueva Operación`)
+        .setDescription(`**Tipo:** ${orderType} | **Activo:** ${asset}`)
+        .setColor(embedColor)
         .addFields(
             {
                 name: '📊 Tipo de Orden',
@@ -74,7 +79,7 @@ export function createTradeEntryEmbed(operation) {
     // Información del contrato removida para un diseño más limpio
 
     embed.setFooter({ 
-        text: 'BDX Traders'
+        text: 'BDX Traders • Sistema Profesional de Trading'
     });
 
     return embed;
@@ -156,7 +161,7 @@ export function createTradeUpdateEmbed(operation, updateType, updatedBy) {
         )
         .setTimestamp()
         .setFooter({ 
-            text: 'BDX Traders'
+            text: 'BDX Traders • Sistema Profesional de Trading'
         });
 
     return embed;
@@ -238,7 +243,7 @@ export function createTradeCloseEmbed(operation, finalPrice, closedBy) {
     }
 
     embed.setFooter({ 
-        text: 'BDX Traders'
+        text: 'BDX Traders • Sistema Profesional de Trading'
     });
 
     return embed;
