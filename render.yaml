@@ -1,0 +1,39 @@
+services:
+  - type: web
+    name: trading-bot-discord
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DISCORD_TOKEN
+        sync: false
+      - key: CLIENT_ID
+        sync: false
+      - key: GUILD_ID
+        sync: false
+      - key: TRADING_CHANNEL_ID
+        sync: false
+      - key: ADMIN_IDS
+        sync: false
+      - key: DATABASE_PATH
+        value: /opt/render/project/data/trading_bot.db
+      - key: LOG_LEVEL
+        value: info
+      - key: LOG_FILE
+        value: /opt/render/project/logs/bot.log
+      - key: BOT_PREFIX
+        value: !
+      - key: EMBED_COLOR_SUCCESS
+        value: 0x00ff00
+      - key: EMBED_COLOR_ERROR
+        value: 0xff0000
+      - key: EMBED_COLOR_WARNING
+        value: 0xffaa00
+      - key: EMBED_COLOR_INFO
+        value: 0x0099ff
+      - key: SUPPORTED_ASSETS
+        value: US30,MNQ,MGC

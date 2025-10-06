@@ -1,0 +1,37 @@
+{
+  "name": "trading-bot-discord",
+  "version": "1.0.0",
+  "description": "Bot profesional de Discord para gestión de operaciones de trading",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "deploy": "node src/deploy-commands.js",
+    "verify": "node scripts/verify-setup.js",
+    "setup": "npm install && npm run verify"
+  },
+  "keywords": [
+    "discord",
+    "bot",
+    "trading",
+    "forex",
+    "futures",
+    "crypto"
+  ],
+  "author": "Hector A",
+  "license": "MIT",
+  "dependencies": {
+    "discord.js": "^14.14.1",
+    "sqlite3": "^5.1.6",
+    "dotenv": "^16.3.1",
+    "moment": "^2.29.4",
+    "winston": "^3.11.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
