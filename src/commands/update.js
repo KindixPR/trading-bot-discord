@@ -135,11 +135,19 @@ async function execute(interaction) {
         logger.info(`Comando /update ejecutado por ${interaction.user.tag}`);
         
         // Debug: Verificar estado de la base de datos
-        await database.debugDatabase();
-        await database.debugOpenOperations();
+        logger.info('=== INICIANDO DEBUG UPDATE ===');
+        try {
+            await database.debugDatabase();
+            await database.debugOpenOperations();
+        } catch (debugError) {
+            logger.error('Error en debugging:', debugError);
+        }
+        logger.info('=== FIN DEBUG UPDATE ===');
         
         // Obtener operaciones abiertas
+        logger.info('Obteniendo operaciones activas...');
         const openOperations = await database.getActiveOperations();
+        logger.info(`Resultado de getActiveOperations: ${openOperations ? openOperations.length : 'null/undefined'}`);
         
         if (!openOperations || openOperations.length === 0) {
             logger.warn(`No se encontraron operaciones activas para usuario ${interaction.user.tag}`);

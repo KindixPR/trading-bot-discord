@@ -485,9 +485,12 @@ async function handleModalSubmit(interaction) {
         });
 
         // Guardar en la base de datos
+        logger.info(`Guardando operación: ${JSON.stringify(operationData)}`);
         const savedOperation = await database.createOperation(operationData);
+        logger.info(`Operación guardada: ${savedOperation ? 'SÍ' : 'NO'}`);
         
         if (!savedOperation) {
+            logger.error('Error: No se pudo guardar la operación');
             await interaction.editReply({
                 content: '❌ Error: No se pudo guardar la operación.'
             });
