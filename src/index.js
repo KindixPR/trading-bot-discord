@@ -27,13 +27,13 @@ class TradingBot {
             const activity = richPresenceConfig.mainActivities[currentIndex];
             const activityType = ActivityType[activity.type];
             
-            this.client.user.setActivity(activity.name, {
+            // Usar solo el estado como nombre para evitar "Viendo/Jugando"
+            this.client.user.setActivity(activity.state, {
                 type: activityType,
-                state: activity.state,
                 url: activity.url
             });
             
-            logger.info(`Rich Presence actualizado: ${activity.emoji} ${activity.name} - ${activity.state}`);
+            logger.info(`Rich Presence actualizado: ${activity.emoji} ${activity.state}`);
             currentIndex = (currentIndex + 1) % richPresenceConfig.mainActivities.length;
         };
 
@@ -54,23 +54,21 @@ class TradingBot {
             const activityType = ActivityType[activity.type];
             
             // Si hay un activo específico, personalizar el mensaje
-            let displayName = activity.name;
             let displayState = activity.state;
             
             if (asset && operationType === 'entry') {
                 const assetActivity = getAssetActivity(asset);
                 if (assetActivity) {
-                    displayName = `Nueva Operación ${asset}`;
-                    displayState = assetActivity.state;
+                    displayState = `Nueva Operación ${asset}`;
                 }
             }
             
-            this.client.user.setActivity(displayName, {
-                type: activityType,
-                state: displayState
+            // Usar solo el estado como nombre para evitar "Viendo/Jugando"
+            this.client.user.setActivity(displayState, {
+                type: activityType
             });
             
-            logger.info(`Rich Presence temporal: ${activity.emoji} ${displayName} - ${displayState}`);
+            logger.info(`Rich Presence temporal: ${activity.emoji} ${displayState}`);
             
             // Volver al Rich Presence normal después del tiempo configurado
             setTimeout(() => {

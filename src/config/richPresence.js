@@ -4,52 +4,52 @@ export const richPresenceConfig = {
     // Actividades principales del bot
     mainActivities: [
         {
-            name: 'BDX Traders - Micro Futures',
+            name: 'Vitaly Signals',
             type: 'Watching',
             state: 'Sistema Profesional de Trading',
             emoji: '🏛️'
         },
         {
-            name: 'US30, MNQ, MGC',
+            name: 'Vitaly Signals',
             type: 'Playing',
-            state: 'Micro Futures Trading',
+            state: 'Trading en Tiempo Real',
             emoji: '📈'
         },
         {
-            name: 'Operaciones Activas',
+            name: 'Vitaly Signals',
             type: 'Listening',
             state: 'Monitoreando Mercados',
             emoji: '👂'
         },
         {
-            name: 'BDX Traders',
+            name: 'Vitaly Signals',
             type: 'Streaming',
-            state: 'Trading en Tiempo Real',
+            state: 'Análisis de Mercados',
             emoji: '📺',
-            url: 'https://twitch.tv/bdx-traders' // Cambiar por tu stream si tienes
+            url: 'https://twitch.tv/vitaly-signals' // Cambiar por tu stream si tienes
         },
         {
-            name: 'Sistema Profesional',
+            name: 'Vitaly Signals',
             type: 'Watching',
-            state: 'Analizando Mercados',
+            state: 'Analizando Señales',
             emoji: '🔍'
         },
         {
-            name: 'Micro Futures',
+            name: 'Vitaly Signals',
             type: 'Playing',
             state: 'BDX Trading Platform',
             emoji: '🎮'
         },
         {
-            name: 'BDX Traders',
+            name: 'Vitaly Signals',
             type: 'Watching',
             state: 'Servidores: 1 | Usuarios: Activos',
             emoji: '👥'
         },
         {
-            name: 'Trading Signals',
+            name: 'Vitaly Signals',
             type: 'Listening',
-            state: 'Procesando Señales',
+            state: 'Procesando Operaciones',
             emoji: '📡'
         }
     ],
@@ -57,21 +57,21 @@ export const richPresenceConfig = {
     // Actividades específicas por comando
     commandActivities: {
         'entry': {
-            name: 'Creando Operación',
+            name: 'Vitaly Signals',
             type: 'Playing',
             state: 'Nueva Señal de Trading',
             emoji: '➕'
         },
         'update': {
-            name: 'Actualizando Operación',
+            name: 'Vitaly Signals',
             type: 'Watching',
-            state: 'Modificando Estado',
+            state: 'Actualizando Operación',
             emoji: '🔄'
         },
         'trades': {
-            name: 'Consultando Operaciones',
+            name: 'Vitaly Signals',
             type: 'Listening',
-            state: 'Analizando Historial',
+            state: 'Consultando Historial',
             emoji: '📊'
         }
     },
@@ -79,19 +79,19 @@ export const richPresenceConfig = {
     // Actividades por tipo de activo
     assetActivities: {
         'US30': {
-            name: 'Dow Jones Micro',
+            name: 'Vitaly Signals',
             type: 'Watching',
             state: 'US30 - Índice Industrial',
             emoji: '🇺🇸'
         },
         'MNQ': {
-            name: 'NASDAQ Micro',
+            name: 'Vitaly Signals',
             type: 'Watching',
             state: 'MNQ - Tecnología',
             emoji: '📈'
         },
         'MGC': {
-            name: 'Gold Micro',
+            name: 'Vitaly Signals',
             type: 'Watching',
             state: 'MGC - Oro',
             emoji: '🥇'
@@ -107,9 +107,9 @@ export const richPresenceConfig = {
 
     // URLs personalizadas (opcional)
     customUrls: {
-        streaming: 'https://twitch.tv/bdx-traders',
-        website: 'https://bdx-traders.com',
-        support: 'https://discord.gg/bdx-traders'
+        streaming: 'https://twitch.tv/vitaly-signals',
+        website: 'https://vitaly-signals.com',
+        support: 'https://discord.gg/vitaly-signals'
     }
 };
 
