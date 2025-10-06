@@ -23,10 +23,9 @@ export const richPresenceConfig = {
         },
         {
             name: 'Vitaly Signals',
-            type: 'Streaming',
+            type: 'Watching',
             state: 'Análisis de Mercados',
-            emoji: '📺',
-            url: 'https://twitch.tv/vitaly-signals' // Cambiar por tu stream si tienes
+            emoji: '📺'
         },
         {
             name: 'Vitaly Signals',
@@ -107,9 +106,9 @@ export const richPresenceConfig = {
 
     // URLs personalizadas (opcional)
     customUrls: {
-        streaming: 'https://twitch.tv/vitaly-signals',
-        website: 'https://vitaly-signals.com',
-        support: 'https://discord.gg/vitaly-signals'
+        streaming: 'https://instagram.com/5vitaly',
+        website: 'https://instagram.com/5vitaly',
+        support: 'https://instagram.com/5vitaly'
     }
 };
 
