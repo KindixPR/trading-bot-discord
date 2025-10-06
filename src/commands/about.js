@@ -65,7 +65,7 @@ Desarrollado específicamente para operaciones de Micro Futures con análisis en
                 text: 'Vitaly Signals • Bot creado por @5vitaly',
                 iconURL: 'https://cdn.discordapp.com/embed/avatars/0.png'
             })
-            .setTimestamp();
+            .setTimestamp(new Date());
 
         // Crear botones de acción
         const actionRow = new ActionRowBuilder()
@@ -97,7 +97,7 @@ Desarrollado específicamente para operaciones de Micro Futures con análisis en
             .setTitle('❌ Error')
             .setDescription('Hubo un error al mostrar la información del bot.')
             .setColor(config.colors.error)
-            .setTimestamp();
+            .setTimestamp(new Date());
 
         if (interaction.replied || interaction.deferred) {
             await interaction.followUp({ embeds: [errorEmbed], flags: 64 });
@@ -142,7 +142,7 @@ async function handleButtonInteraction(interaction) {
                 .setFooter({ 
                     text: 'Vitaly Signals • Desarrollado por @5vitaly'
                 })
-                .setTimestamp();
+                .setTimestamp(new Date());
 
             await interaction.update({ embeds: [commandsEmbed] });
 
@@ -175,7 +175,7 @@ async function handleButtonInteraction(interaction) {
                 .setFooter({ 
                     text: 'Vitaly Signals • Sistema Profesional'
                 })
-                .setTimestamp();
+                .setTimestamp(new Date());
 
             await interaction.update({ embeds: [statsEmbed] });
         }

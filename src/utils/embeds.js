@@ -8,7 +8,7 @@ moment.locale('es');
 
 // Función helper para obtener timestamp para Discord
 function getDiscordTimestamp() {
-    return new Date().toISOString(); // Discord requiere ISO string
+    return new Date(); // Discord.js v14 maneja automáticamente la conversión
 }
 
 // Función helper para formatear fecha en formato de 12 horas (para campos de texto)
@@ -74,7 +74,7 @@ export function createTradeEntryEmbed(operation) {
                 inline: true
             }
         )
-        .setTimestamp(getDiscordTimestamp());
+        .setTimestamp(new Date());
 
     // Información del contrato removida para un diseño más limpio
 
@@ -159,7 +159,7 @@ export function createTradeUpdateEmbed(operation, updateType, updatedBy) {
                 inline: true
             }
         )
-        .setTimestamp()
+        .setTimestamp(new Date())
         .setFooter({ 
             text: 'BDX Traders • Sistema Profesional de Trading'
         });
@@ -231,7 +231,7 @@ export function createTradeCloseEmbed(operation, finalPrice, closedBy) {
                 inline: true
             }
         )
-        .setTimestamp(getDiscordTimestamp());
+        .setTimestamp(new Date());
 
     // Agregar valor monetario si está disponible
     if (monetaryValue !== null) {
@@ -260,7 +260,7 @@ export function createErrorEmbed(title, description) {
         .setTitle(`❌ ${title}`)
         .setDescription(description)
         .setColor(config.colors.error)
-        .setTimestamp(getDiscordTimestamp());
+        .setTimestamp(new Date());
 }
 
 /**
@@ -274,7 +274,7 @@ export function createSuccessEmbed(title, description) {
         .setTitle(`✅ ${title}`)
         .setDescription(description)
         .setColor(config.colors.success)
-        .setTimestamp(getDiscordTimestamp());
+        .setTimestamp(new Date());
 }
 
 /**
@@ -288,7 +288,7 @@ export function createInfoEmbed(title, description) {
         .setTitle(`ℹ️ ${title}`)
         .setDescription(description)
         .setColor(config.colors.info)
-        .setTimestamp(getDiscordTimestamp());
+        .setTimestamp(new Date());
 }
 
 /**
@@ -300,7 +300,7 @@ export function createActiveOperationsEmbed(operations) {
     const embed = new EmbedBuilder()
         .setTitle('📊 Operaciones Activas')
         .setColor(config.colors.info)
-        .setTimestamp(getDiscordTimestamp());
+        .setTimestamp(new Date());
 
     if (operations.length === 0) {
         embed.setDescription('No hay operaciones activas en este momento.');

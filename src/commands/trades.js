@@ -38,7 +38,7 @@ async function execute(interaction) {
             .setTitle('📊 Dashboard de Operaciones')
             .setDescription('**Resumen de todas las operaciones de trading**')
             .setColor(config.colors.info)
-            .setTimestamp();
+            .setTimestamp(new Date());
 
         // Agregar estadísticas
         embed.addFields(
@@ -156,7 +156,7 @@ async function handleButtonInteraction(interaction) {
                         .setTitle('✅ Limpieza Completada')
                         .setDescription('Todas las operaciones y su historial han sido eliminados exitosamente.\n\n🔄 **El sistema se ha reiniciado completamente.**')
                         .setColor(config.colors.success)
-                        .setTimestamp();
+                        .setTimestamp(new Date());
 
                     await interaction.update({
                         embeds: [successEmbed],
@@ -232,7 +232,7 @@ async function handleButtonInteraction(interaction) {
                         .setTitle('🧹 Confirmar Limpieza')
                         .setDescription(`¿Estás seguro de que quieres eliminar **${allOperations.length}** operaciones?\n\n⚠️ **Esta acción no se puede deshacer.**`)
                         .setColor(config.colors.warning)
-                        .setTimestamp();
+                        .setTimestamp(new Date());
 
                     const confirmRow = new ActionRowBuilder()
                         .addComponents(
@@ -280,7 +280,7 @@ async function handleButtonInteraction(interaction) {
                 .setTitle(title)
                 .setDescription(`**${operations.length} operaciones encontradas**`)
                 .setColor(color)
-                .setTimestamp();
+                .setTimestamp(new Date());
             
             // Mostrar las primeras 10 operaciones
             const operationsToShow = operations.slice(0, 10);
