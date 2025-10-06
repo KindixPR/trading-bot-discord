@@ -4,6 +4,7 @@ import { logger } from './utils/logger.js';
 import { database } from './database/database.js';
 import { loadCommands } from './utils/commandLoader.js';
 import { checkPermissions } from './utils/permissions.js';
+import server from './server.js';
 
 class TradingBot {
     constructor() {

@@ -1,11 +1,10 @@
 services:
-  - type: web
+  - type: worker
     name: trading-bot-discord
     env: node
     plan: free
     buildCommand: npm install && mkdir -p data logs
     startCommand: npm start
-    healthCheckPath: /
     envVars:
       - key: NODE_ENV
         value: production
