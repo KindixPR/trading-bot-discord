@@ -78,11 +78,14 @@ async function handleButtonInteraction(interaction) {
         const customId = interaction.customId;
         
         if (customId.startsWith('asset_')) {
+            // Deferir respuesta para evitar timeout
+            await interaction.deferUpdate();
+            
             // Paso 1: Activo seleccionado
             const asset = customId.replace('asset_', '').toUpperCase();
             
             if (!isValidAsset(asset)) {
-                await interaction.update({
+                await interaction.editReply({
                     content: '❌ Error: Activo no válido.',
                     components: []
                 });
@@ -116,20 +119,23 @@ async function handleButtonInteraction(interaction) {
                 timestamp: new Date()
             };
 
-            await interaction.update({ 
+            await interaction.editReply({ 
                 embeds: [embed], 
-                components: [typeRow] 
+                components: [typeRow]
             });
 
             logger.info(`Usuario ${interaction.user.tag} seleccionó activo: ${asset}`);
 
         } else if (customId.startsWith('type_')) {
+            // Deferir respuesta para evitar timeout
+            await interaction.deferUpdate();
+            
             // Paso 2: Tipo seleccionado
             const orderType = customId.replace('type_', '');
             const userState = interactionState.get(interaction.user.id);
             
             if (!userState || !userState.asset) {
-                await interaction.update({
+                await interaction.editReply({
                     content: '❌ Error: No se encontró el activo seleccionado. Por favor, inicia el proceso nuevamente con `/entry`.',
                     components: []
                 });
@@ -137,7 +143,7 @@ async function handleButtonInteraction(interaction) {
             }
             
             if (!isValidOrderType(orderType)) {
-                await interaction.update({
+                await interaction.editReply({
                     content: '❌ Error: Tipo de orden no válido.',
                     components: []
                 });
@@ -208,6 +214,16 @@ async function handleButtonInteraction(interaction) {
             modal.addComponents(firstActionRow, secondActionRow, thirdActionRow, fourthActionRow, fifthActionRow);
 
             // Mostrar modal
+            await interaction.editReply({ 
+                content: '📝 **Completa los detalles de la operación:**',
+                components: []
+            });
+            
+            await interaction.followUp({ 
+                content: '**Modal abierto** - Completa los campos y envía para crear la operación.',
+                flags: 64 // EPHEMERAL
+            });
+            
             await interaction.showModal(modal);
 
             logger.info(`Usuario ${interaction.user.tag} seleccionó tipo: ${orderType} para ${userState.asset}`);

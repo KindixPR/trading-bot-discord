@@ -162,6 +162,9 @@ async function handleButtonInteraction(interaction) {
         const customId = interaction.customId;
         
         if (customId.startsWith('update_op_')) {
+            // Deferir respuesta para evitar timeout
+            await interaction.deferUpdate();
+            
             // Paso 1: Operación seleccionada
             const operationId = customId.replace('update_op_', '');
             
@@ -169,7 +172,7 @@ async function handleButtonInteraction(interaction) {
             const operation = await database.getOperation(operationId);
             
             if (!operation) {
-                await interaction.update({
+                await interaction.editReply({
                     content: '❌ Error: No se encontró la operación seleccionada.',
                     components: []
                 });
@@ -236,7 +239,7 @@ async function handleButtonInteraction(interaction) {
                 timestamp: new Date()
             };
 
-            await interaction.update({ 
+            await interaction.editReply({ 
                 embeds: [embed], 
                 components: [statusRow, slRow] 
             });
@@ -244,12 +247,15 @@ async function handleButtonInteraction(interaction) {
             logger.info(`Usuario ${interaction.user.tag} seleccionó operación: ${operationId}`);
 
         } else if (customId.startsWith('status_')) {
+            // Deferir respuesta para evitar timeout
+            await interaction.deferUpdate();
+            
             // Paso 2: Estado seleccionado
             const newStatus = customId.replace('status_', '').toUpperCase();
             const userState = updateInteractionState.get(interaction.user.id);
             
             if (!userState || !userState.operationId) {
-                await interaction.update({
+                await interaction.editReply({
                     content: '❌ Error: No se encontró la operación seleccionada. Por favor, inicia el proceso nuevamente con `/update`.',
                     components: []
                 });
@@ -304,11 +310,11 @@ async function handleButtonInteraction(interaction) {
             // Limpiar estado del usuario
             updateInteractionState.delete(interaction.user.id);
             
-            // Primero confirmar privadamente
-            await interaction.update({
-                content: '✅ **Operación actualizada exitosamente!** Se está publicando al canal...',
-                components: []
-            });
+                   // Primero confirmar privadamente
+                   await interaction.editReply({
+                       content: '✅ **Operación actualizada exitosamente!** Se está publicando al canal...',
+                       components: []
+                   });
 
             // Luego enviar al canal público
             await interaction.followUp({ 
