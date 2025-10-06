@@ -106,9 +106,9 @@ async function execute(interaction) {
         try {
             const embed = createErrorEmbed('Error', 'Hubo un error al obtener las operaciones. Por favor, inténtalo de nuevo.');
             if (interaction.replied || interaction.deferred) {
-                await interaction.followUp({ embeds: [embed], flags: 64 // 64 = EPHEMERAL });
+                await interaction.followUp({ embeds: [embed], flags: 64 }); // 64 = EPHEMERAL
             } else {
-                await interaction.reply({ embeds: [embed], flags: 64 // 64 = EPHEMERAL });
+                await interaction.reply({ embeds: [embed], flags: 64 }); // 64 = EPHEMERAL
             }
         } catch (replyError) {
             logger.error('Error al responder en trades:', replyError);
