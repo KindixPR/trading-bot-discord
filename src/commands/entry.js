@@ -242,9 +242,8 @@ async function handleModalSubmit(interaction) {
         const userState = interactionState.get(interaction.user.id);
         
         if (!userState || !userState.asset || !userState.orderType) {
-            await interaction.reply({
-                content: '❌ Error: No se encontró la información de la operación. Por favor, inicia el proceso nuevamente con `/entry`.',
-                ephemeral: true
+            await interaction.editReply({
+                content: '❌ Error: No se encontró la información de la operación. Por favor, inicia el proceso nuevamente con `/entry`.'
             });
             return;
         }
@@ -261,33 +260,29 @@ async function handleModalSubmit(interaction) {
 
         // Validaciones
         if (!isValidPrice(entryPrice)) {
-            await interaction.reply({
-                content: '❌ Error: El precio de entrada no es válido.',
-                ephemeral: true
+            await interaction.editReply({
+                content: '❌ Error: El precio de entrada no es válido.'
             });
             return;
         }
 
         if (takeProfit1 && !isValidPrice(takeProfit1)) {
-            await interaction.reply({
-                content: '❌ Error: El precio de Take Profit 1 no es válido.',
-                ephemeral: true
+            await interaction.editReply({
+                content: '❌ Error: El precio de Take Profit 1 no es válido.'
             });
             return;
         }
 
         if (takeProfit2 && !isValidPrice(takeProfit2)) {
-            await interaction.reply({
-                content: '❌ Error: El precio de Take Profit 2 no es válido.',
-                ephemeral: true
+            await interaction.editReply({
+                content: '❌ Error: El precio de Take Profit 2 no es válido.'
             });
             return;
         }
 
         if (stopLoss && !isValidPrice(stopLoss)) {
-            await interaction.reply({
-                content: '❌ Error: El precio de stop loss no es válido.',
-                ephemeral: true
+            await interaction.editReply({
+                content: '❌ Error: El precio de stop loss no es válido.'
             });
             return;
         }
@@ -313,9 +308,8 @@ async function handleModalSubmit(interaction) {
         const savedOperation = await database.createOperation(operationData);
         
         if (!savedOperation) {
-            await interaction.reply({
-                content: '❌ Error: No se pudo guardar la operación.',
-                ephemeral: true
+            await interaction.editReply({
+                content: '❌ Error: No se pudo guardar la operación.'
             });
             return;
         }
@@ -327,9 +321,8 @@ async function handleModalSubmit(interaction) {
         interactionState.delete(interaction.user.id);
 
         // Primero confirmar privadamente
-        await interaction.reply({
-            content: '✅ **Operación creada exitosamente!** Se está publicando al canal...',
-            ephemeral: true
+        await interaction.editReply({
+            content: '✅ **Operación creada exitosamente!** Se está publicando al canal...'
         });
 
         // Luego enviar al canal público
@@ -346,10 +339,16 @@ async function handleModalSubmit(interaction) {
         logger.error('Error en handleModalSubmit (entry):', error);
         
         try {
-            await interaction.reply({
-                content: '❌ Hubo un error creando la operación. Por favor, inténtalo de nuevo.',
-                ephemeral: true
-            });
+            if (interaction.replied || interaction.deferred) {
+                await interaction.editReply({
+                    content: '❌ Hubo un error creando la operación. Por favor, inténtalo de nuevo.'
+                });
+            } else {
+                await interaction.reply({
+                    content: '❌ Hubo un error creando la operación. Por favor, inténtalo de nuevo.',
+                    ephemeral: true
+                });
+            }
         } catch (replyError) {
             logger.error('Error al responder en handleModalSubmit (entry):', replyError);
         }
