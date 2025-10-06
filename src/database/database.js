@@ -34,11 +34,39 @@ class Database {
                     logger.info(`Conectado exitosamente a la base de datos: ${this.dbPath}`);
                     this.createTables().then(() => {
                         logger.info('Tablas creadas/verificadas, base de datos lista');
-                        resolve();
+                        
+                        // Verificar que las tablas se crearon correctamente
+                        this.verifyTables().then(() => {
+                            resolve();
+                        }).catch(reject);
                     }).catch(reject);
                 }
             });
         });
+    }
+
+    async verifyTables() {
+        try {
+            // Verificar que la tabla trading_operations existe
+            const tableCheck = await this.get("SELECT name FROM sqlite_master WHERE type='table' AND name='trading_operations'");
+            if (!tableCheck) {
+                logger.error('CRÍTICO: Tabla trading_operations no existe después de la inicialización');
+                throw new Error('Tabla trading_operations no existe');
+            }
+            logger.info('✅ Tabla trading_operations verificada correctamente');
+            
+            // Verificar que la tabla operation_updates existe
+            const updatesTableCheck = await this.get("SELECT name FROM sqlite_master WHERE type='table' AND name='operation_updates'");
+            if (!updatesTableCheck) {
+                logger.error('CRÍTICO: Tabla operation_updates no existe después de la inicialización');
+                throw new Error('Tabla operation_updates no existe');
+            }
+            logger.info('✅ Tabla operation_updates verificada correctamente');
+            
+        } catch (error) {
+            logger.error('Error verificando tablas:', error);
+            throw error;
+        }
     }
 
     async createTables() {

@@ -105,12 +105,22 @@ function getStatusMessage(status, operation) {
 async function execute(interaction) {
     const userId = interaction.user.id;
     
+    // Verificar si la interacción ya fue respondida
+    if (interaction.replied || interaction.deferred) {
+        logger.warn(`Interacción ya fue respondida para usuario ${interaction.user.tag}`);
+        return;
+    }
+    
     // Deferir respuesta INMEDIATAMENTE - SIN NINGUNA VERIFICACIÓN PREVIA
     try {
         await interaction.deferReply({ flags: 64 });
     } catch (error) {
         if (error.code === 10062) {
             logger.warn(`Interacción expirada para usuario ${interaction.user.tag} antes de poder responder`);
+            return;
+        }
+        if (error.code === 40060) {
+            logger.warn(`Interacción ya fue reconocida para usuario ${interaction.user.tag}`);
             return;
         }
         throw error;
