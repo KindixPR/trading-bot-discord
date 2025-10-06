@@ -54,22 +54,7 @@ const permissions = ['ADMINISTRATOR'];
 async function execute(interaction) {
     const userId = interaction.user.id;
     
-    // Verificar si el usuario ya tiene un lock activo ANTES de deferir
-    if (userLocks.has(userId)) {
-        logger.warn(`Usuario ${interaction.user.tag} intentó ejecutar /entry mientras ya está en proceso`);
-        try {
-            await interaction.reply({ content: '⏳ Ya tienes una operación en proceso. Espera a que termine.', flags: 64 });
-        } catch (error) {
-            if (error.code === 10062) {
-                logger.warn(`Interacción expirada para usuario ${interaction.user.tag} (usuario bloqueado)`);
-                return;
-            }
-            logger.error('Error respondiendo a usuario bloqueado:', error);
-        }
-        return;
-    }
-    
-    // Deferir respuesta INMEDIATAMENTE para evitar timeout
+    // Deferir respuesta INMEDIATAMENTE - SIN NINGUNA VERIFICACIÓN PREVIA
     try {
         await interaction.deferReply({ flags: 64 });
     } catch (error) {
@@ -78,6 +63,17 @@ async function execute(interaction) {
             return;
         }
         throw error;
+    }
+    
+    // AHORA verificar si el usuario ya tiene un lock activo
+    if (userLocks.has(userId)) {
+        logger.warn(`Usuario ${interaction.user.tag} intentó ejecutar /entry mientras ya está en proceso`);
+        try {
+            await interaction.editReply({ content: '⏳ Ya tienes una operación en proceso. Espera a que termine.' });
+        } catch (error) {
+            logger.error('Error editando respuesta de usuario bloqueado:', error);
+        }
+        return;
     }
     
     // Crear lock para el usuario
@@ -131,6 +127,7 @@ async function execute(interaction) {
 // Manejar interacciones de botones para entry
 async function handleButtonInteraction(interaction) {
     const userId = interaction.user.id;
+    const customId = interaction.customId;
     
     // Verificar si la interacción ya fue respondida
     if (interaction.replied || interaction.deferred) {
@@ -138,27 +135,26 @@ async function handleButtonInteraction(interaction) {
         return;
     }
     
-    // Verificar si el usuario tiene un lock activo
-    if (!userLocks.has(userId)) {
-        logger.warn(`Usuario ${interaction.user.tag} intentó usar botón sin lock activo`);
-        try {
-            await interaction.reply({ content: '❌ Sesión expirada. Inicia el proceso nuevamente con `/entry`.', flags: 64 });
-        } catch (error) {
-            if (error.code === 10062) {
-                logger.warn(`Interacción expirada para usuario ${interaction.user.tag} (sin lock)`);
-                return;
-            }
-            logger.error('Error respondiendo a usuario sin lock:', error);
-        }
-        return;
-    }
-    
     try {
-        const customId = interaction.customId;
         
         if (customId.startsWith('asset_')) {
-            // Paso 1: Activo seleccionado - usar deferUpdate
+            // Paso 1: Activo seleccionado - verificar lock y deferir
             const asset = customId.replace('asset_', '').toUpperCase();
+            
+            // Verificar si el usuario tiene un lock activo
+            if (!userLocks.has(userId)) {
+                logger.warn(`Usuario ${interaction.user.tag} intentó usar botón sin lock activo`);
+                try {
+                    await interaction.reply({ content: '❌ Sesión expirada. Inicia el proceso nuevamente con `/entry`.', flags: 64 });
+                } catch (error) {
+                    if (error.code === 10062) {
+                        logger.warn(`Interacción expirada para usuario ${interaction.user.tag} (sin lock)`);
+                        return;
+                    }
+                    throw error;
+                }
+                return;
+            }
             
             if (!isValidAsset(asset)) {
                 try {
@@ -225,8 +221,24 @@ async function handleButtonInteraction(interaction) {
 
         } else if (customId.startsWith('type_')) {
             
-            // Paso 2: Tipo seleccionado - NO deferir para poder mostrar modal
+            // Paso 2: Tipo seleccionado - verificar lock y mostrar modal
             const orderType = customId.replace('type_', '');
+            
+            // Verificar si el usuario tiene un lock activo
+            if (!userLocks.has(userId)) {
+                logger.warn(`Usuario ${interaction.user.tag} intentó usar botón sin lock activo`);
+                try {
+                    await interaction.reply({ content: '❌ Sesión expirada. Inicia el proceso nuevamente con `/entry`.', flags: 64 });
+                } catch (error) {
+                    if (error.code === 10062) {
+                        logger.warn(`Interacción expirada para usuario ${interaction.user.tag} (sin lock)`);
+                        return;
+                    }
+                    throw error;
+                }
+                return;
+            }
+            
             const userState = interactionState.get(interaction.user.id);
             
             if (!userState || !userState.asset) {

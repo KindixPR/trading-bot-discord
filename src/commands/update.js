@@ -105,22 +105,7 @@ function getStatusMessage(status, operation) {
 async function execute(interaction) {
     const userId = interaction.user.id;
     
-    // Verificar si el usuario ya tiene un lock activo ANTES de deferir
-    if (updateUserLocks.has(userId)) {
-        logger.warn(`Usuario ${interaction.user.tag} intentó ejecutar /update mientras ya está en proceso`);
-        try {
-            await interaction.reply({ content: '⏳ Ya tienes una actualización en proceso. Espera a que termine.', flags: 64 });
-        } catch (error) {
-            if (error.code === 10062) {
-                logger.warn(`Interacción expirada para usuario ${interaction.user.tag} (usuario bloqueado)`);
-                return;
-            }
-            logger.error('Error respondiendo a usuario bloqueado:', error);
-        }
-        return;
-    }
-    
-    // Deferir respuesta INMEDIATAMENTE para evitar timeout
+    // Deferir respuesta INMEDIATAMENTE - SIN NINGUNA VERIFICACIÓN PREVIA
     try {
         await interaction.deferReply({ flags: 64 });
     } catch (error) {
@@ -129,6 +114,17 @@ async function execute(interaction) {
             return;
         }
         throw error;
+    }
+    
+    // AHORA verificar si el usuario ya tiene un lock activo
+    if (updateUserLocks.has(userId)) {
+        logger.warn(`Usuario ${interaction.user.tag} intentó ejecutar /update mientras ya está en proceso`);
+        try {
+            await interaction.editReply({ content: '⏳ Ya tienes una actualización en proceso. Espera a que termine.' });
+        } catch (error) {
+            logger.error('Error editando respuesta de usuario bloqueado:', error);
+        }
+        return;
     }
     
     // Crear lock para el usuario
