@@ -138,28 +138,17 @@ async function handleButtonInteraction(interaction) {
         return;
     }
     
-    // Deferir respuesta INMEDIATAMENTE para evitar timeout
-    try {
-        await interaction.deferUpdate();
-    } catch (error) {
-        if (error.code === 10062) {
-            logger.warn(`Interacción de botón expirada para usuario ${interaction.user.tag}`);
-            return;
-        }
-        if (error.code === 40060) {
-            logger.warn(`Interacción de botón ya fue reconocida para usuario ${interaction.user.tag}`);
-            return;
-        }
-        throw error;
-    }
-    
     // Verificar si el usuario tiene un lock activo
     if (!userLocks.has(userId)) {
         logger.warn(`Usuario ${interaction.user.tag} intentó usar botón sin lock activo`);
         try {
-            await interaction.editReply({ content: '❌ Sesión expirada. Inicia el proceso nuevamente con `/entry`.', components: [] });
-        } catch (editError) {
-            logger.error('Error editando respuesta de botón:', editError);
+            await interaction.reply({ content: '❌ Sesión expirada. Inicia el proceso nuevamente con `/entry`.', flags: 64 });
+        } catch (error) {
+            if (error.code === 10062) {
+                logger.warn(`Interacción expirada para usuario ${interaction.user.tag} (sin lock)`);
+                return;
+            }
+            logger.error('Error respondiendo a usuario sin lock:', error);
         }
         return;
     }
@@ -168,15 +157,35 @@ async function handleButtonInteraction(interaction) {
         const customId = interaction.customId;
         
         if (customId.startsWith('asset_')) {
-            // Paso 1: Activo seleccionado
+            // Paso 1: Activo seleccionado - usar deferUpdate
             const asset = customId.replace('asset_', '').toUpperCase();
             
             if (!isValidAsset(asset)) {
-                await interaction.editReply({
-                    content: '❌ Error: Activo no válido.',
-                    components: []
-                });
+                try {
+                    await interaction.reply({ content: '❌ Error: Activo no válido.', flags: 64 });
+                } catch (error) {
+                    if (error.code === 10062) {
+                        logger.warn(`Interacción expirada para usuario ${interaction.user.tag} (activo inválido)`);
+                        return;
+                    }
+                    throw error;
+                }
                 return;
+            }
+            
+            // Deferir para actualizar el mensaje
+            try {
+                await interaction.deferUpdate();
+            } catch (error) {
+                if (error.code === 10062) {
+                    logger.warn(`Interacción expirada para usuario ${interaction.user.tag} (defer asset)`);
+                    return;
+                }
+                if (error.code === 40060) {
+                    logger.warn(`Interacción ya reconocida para usuario ${interaction.user.tag} (defer asset)`);
+                    return;
+                }
+                throw error;
             }
             
             // Guardar estado y resetear timeout
@@ -216,7 +225,7 @@ async function handleButtonInteraction(interaction) {
 
         } else if (customId.startsWith('type_')) {
             
-            // Paso 2: Tipo seleccionado
+            // Paso 2: Tipo seleccionado - NO deferir para poder mostrar modal
             const orderType = customId.replace('type_', '');
             const userState = interactionState.get(interaction.user.id);
             
@@ -224,18 +233,34 @@ async function handleButtonInteraction(interaction) {
                 // Limpiar cualquier estado residual
                 cleanupUserState(interaction.user.id);
                 
-                await interaction.editReply({
-                    content: '❌ **Sesión expirada**: No se encontró el activo seleccionado. La sesión puede haber expirado.\n\n🔄 **Solución**: Inicia el proceso nuevamente con `/entry`.',
-                    components: []
-                });
+                try {
+                    await interaction.reply({ 
+                        content: '❌ **Sesión expirada**: No se encontró el activo seleccionado. La sesión puede haber expirado.\n\n🔄 **Solución**: Inicia el proceso nuevamente con `/entry`.',
+                        flags: 64 
+                    });
+                } catch (error) {
+                    if (error.code === 10062) {
+                        logger.warn(`Interacción expirada para usuario ${interaction.user.tag} (sesión expirada)`);
+                        return;
+                    }
+                    throw error;
+                }
                 return;
             }
             
             if (!isValidOrderType(orderType)) {
-                await interaction.editReply({
-                    content: '❌ Error: Tipo de orden no válido.',
-                    components: []
-                });
+                try {
+                    await interaction.reply({ 
+                        content: '❌ Error: Tipo de orden no válido.',
+                        flags: 64 
+                    });
+                } catch (error) {
+                    if (error.code === 10062) {
+                        logger.warn(`Interacción expirada para usuario ${interaction.user.tag} (tipo inválido)`);
+                        return;
+                    }
+                    throw error;
+                }
                 return;
             }
             
@@ -303,8 +328,16 @@ async function handleButtonInteraction(interaction) {
 
             modal.addComponents(firstActionRow, secondActionRow, thirdActionRow, fourthActionRow, fifthActionRow);
 
-            // Mostrar modal INMEDIATAMENTE después del deferUpdate
-            await interaction.showModal(modal);
+            // Mostrar modal directamente
+            try {
+                await interaction.showModal(modal);
+            } catch (error) {
+                if (error.code === 10062) {
+                    logger.warn(`Interacción expirada para usuario ${interaction.user.tag} (mostrar modal)`);
+                    return;
+                }
+                throw error;
+            }
 
             logger.info(`Usuario ${interaction.user.tag} seleccionó tipo: ${orderType} para ${userState.asset}`);
 
