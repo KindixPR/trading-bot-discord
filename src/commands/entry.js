@@ -135,6 +135,25 @@ async function handleButtonInteraction(interaction) {
         return;
     }
     
+    // Verificar si la interacción es muy antigua (más de 10 minutos)
+    const interactionAge = Date.now() - interaction.createdTimestamp;
+    if (interactionAge > 600000) { // 10 minutos
+        logger.warn(`Interacción muy antigua para usuario ${interaction.user.tag} (${Math.round(interactionAge / 1000)}s)`);
+        try {
+            await interaction.reply({ 
+                content: '⏰ **Interacción muy antigua**: Esta interacción es muy antigua.\n\n🔄 **Para continuar**: Usa `/entry` para iniciar un nuevo proceso.',
+                flags: 64 
+            });
+        } catch (error) {
+            if (error.code === 10062) {
+                logger.warn(`Interacción expirada para usuario ${interaction.user.tag} (muy antigua)`);
+                return;
+            }
+            logger.error('Error respondiendo a interacción antigua:', error);
+        }
+        return;
+    }
+    
     try {
         
         if (customId.startsWith('asset_')) {
@@ -143,15 +162,19 @@ async function handleButtonInteraction(interaction) {
             
             // Verificar si el usuario tiene un lock activo
             if (!userLocks.has(userId)) {
-                logger.warn(`Usuario ${interaction.user.tag} intentó usar botón sin lock activo`);
+                logger.warn(`Usuario ${interaction.user.tag} intentó usar botón sin lock activo - sesión expirada`);
                 try {
-                    await interaction.reply({ content: '❌ Sesión expirada. Inicia el proceso nuevamente con `/entry`.', flags: 64 });
+                    await interaction.reply({ 
+                        content: '⏰ **Sesión expirada**: Tu sesión de creación de operación ha expirado.\n\n🔄 **Para continuar**: Usa `/entry` para iniciar un nuevo proceso.',
+                        flags: 64 
+                    });
                 } catch (error) {
                     if (error.code === 10062) {
-                        logger.warn(`Interacción expirada para usuario ${interaction.user.tag} (sin lock)`);
+                        logger.warn(`Interacción expirada para usuario ${interaction.user.tag} (sesión ya expirada)`);
                         return;
                     }
-                    throw error;
+                    // Si hay otro error, no hacer nada para evitar más errores
+                    logger.error('Error respondiendo a usuario sin lock:', error);
                 }
                 return;
             }
@@ -174,14 +197,16 @@ async function handleButtonInteraction(interaction) {
                 await interaction.deferUpdate();
             } catch (error) {
                 if (error.code === 10062) {
-                    logger.warn(`Interacción expirada para usuario ${interaction.user.tag} (defer asset)`);
+                    logger.warn(`Interacción expirada para usuario ${interaction.user.tag} (defer asset) - sesión muy antigua`);
                     return;
                 }
                 if (error.code === 40060) {
                     logger.warn(`Interacción ya reconocida para usuario ${interaction.user.tag} (defer asset)`);
                     return;
                 }
-                throw error;
+                // Para otros errores, no hacer nada para evitar más errores
+                logger.error('Error en deferUpdate (asset):', error);
+                return;
             }
             
             // Guardar estado y resetear timeout
@@ -226,15 +251,19 @@ async function handleButtonInteraction(interaction) {
             
             // Verificar si el usuario tiene un lock activo
             if (!userLocks.has(userId)) {
-                logger.warn(`Usuario ${interaction.user.tag} intentó usar botón sin lock activo`);
+                logger.warn(`Usuario ${interaction.user.tag} intentó usar botón sin lock activo - sesión expirada`);
                 try {
-                    await interaction.reply({ content: '❌ Sesión expirada. Inicia el proceso nuevamente con `/entry`.', flags: 64 });
+                    await interaction.reply({ 
+                        content: '⏰ **Sesión expirada**: Tu sesión de creación de operación ha expirado.\n\n🔄 **Para continuar**: Usa `/entry` para iniciar un nuevo proceso.',
+                        flags: 64 
+                    });
                 } catch (error) {
                     if (error.code === 10062) {
-                        logger.warn(`Interacción expirada para usuario ${interaction.user.tag} (sin lock)`);
+                        logger.warn(`Interacción expirada para usuario ${interaction.user.tag} (sesión ya expirada)`);
                         return;
                     }
-                    throw error;
+                    // Si hay otro error, no hacer nada para evitar más errores
+                    logger.error('Error respondiendo a usuario sin lock:', error);
                 }
                 return;
             }

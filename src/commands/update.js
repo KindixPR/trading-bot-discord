@@ -222,6 +222,25 @@ async function handleButtonInteraction(interaction) {
         return;
     }
     
+    // Verificar si la interacción es muy antigua (más de 10 minutos)
+    const interactionAge = Date.now() - interaction.createdTimestamp;
+    if (interactionAge > 600000) { // 10 minutos
+        logger.warn(`Interacción muy antigua para usuario ${interaction.user.tag} (${Math.round(interactionAge / 1000)}s)`);
+        try {
+            await interaction.reply({ 
+                content: '⏰ **Interacción muy antigua**: Esta interacción es muy antigua.\n\n🔄 **Para continuar**: Usa `/update` para iniciar un nuevo proceso.',
+                flags: 64 
+            });
+        } catch (error) {
+            if (error.code === 10062) {
+                logger.warn(`Interacción expirada para usuario ${interaction.user.tag} (muy antigua)`);
+                return;
+            }
+            logger.error('Error respondiendo a interacción antigua:', error);
+        }
+        return;
+    }
+    
     // Deferir respuesta INMEDIATAMENTE para evitar timeout
     try {
         await interaction.deferUpdate();
@@ -234,7 +253,9 @@ async function handleButtonInteraction(interaction) {
             logger.warn(`Interacción de botón ya fue reconocida para usuario ${interaction.user.tag}`);
             return;
         }
-        throw error;
+        // Para otros errores, no hacer nada para evitar más errores
+        logger.error('Error en deferUpdate (update):', error);
+        return;
     }
     
     try {
