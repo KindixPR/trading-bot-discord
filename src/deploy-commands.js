@@ -5,20 +5,42 @@ import { logger } from './utils/logger.js';
 
 async function deployCommands() {
     try {
-        logger.info('Iniciando deployment de comandos...');
+        logger.info('🧹 Iniciando limpieza y deployment de comandos...');
 
-        // Cargar comandos
+        // Crear instancia REST
+        const rest = new REST({ version: '10' }).setToken(config.discord.token);
+
+        // PASO 1: Limpiar TODOS los comandos existentes
+        logger.info('🗑️ Limpiando comandos antiguos...');
+        
+        if (config.discord.guildId) {
+            // Limpiar comandos del servidor específico
+            await rest.put(
+                Routes.applicationGuildCommands(config.discord.clientId, config.discord.guildId),
+                { body: [] }
+            );
+            logger.info('✅ Comandos del servidor eliminados.');
+        } else {
+            // Limpiar comandos globales
+            await rest.put(
+                Routes.applicationCommands(config.discord.clientId),
+                { body: [] }
+            );
+            logger.info('✅ Comandos globales eliminados.');
+        }
+
+        // PASO 2: Cargar solo los 3 comandos principales
         const commands = new Map();
         await loadCommands(commands);
         
         const commandData = getCommandsForRegistration(commands);
         
-        logger.info(`Registrando ${commandData.length} comandos...`);
+        logger.info(`📝 Registrando ${commandData.length} comandos principales...`);
+        commandData.forEach(cmd => {
+            logger.info(`   - /${cmd.name}: ${cmd.description}`);
+        });
 
-        // Crear instancia REST
-        const rest = new REST({ version: '10' }).setToken(config.discord.token);
-
-        // Registrar comandos
+        // PASO 3: Registrar solo los comandos principales
         if (config.discord.guildId) {
             // Registro en servidor específico (desarrollo)
             logger.info('Registrando comandos en servidor específico...');
@@ -26,7 +48,7 @@ async function deployCommands() {
                 Routes.applicationGuildCommands(config.discord.clientId, config.discord.guildId),
                 { body: commandData }
             );
-            logger.info('Comandos registrados en servidor específico.');
+            logger.info('✅ Comandos registrados en servidor específico.');
         } else {
             // Registro global (producción)
             logger.info('Registrando comandos globalmente...');
@@ -34,13 +56,17 @@ async function deployCommands() {
                 Routes.applicationCommands(config.discord.clientId),
                 { body: commandData }
             );
-            logger.info('Comandos registrados globalmente.');
+            logger.info('✅ Comandos registrados globalmente.');
         }
 
-        logger.info('✅ Deployment de comandos completado exitosamente!');
+        logger.info('🎉 ¡Limpieza y deployment completados exitosamente!');
+        logger.info('📋 Solo estos comandos están ahora registrados:');
+        commandData.forEach(cmd => {
+            logger.info(`   ✅ /${cmd.name}`);
+        });
 
     } catch (error) {
-        logger.error('❌ Error durante el deployment de comandos:', error);
+        logger.error('❌ Error durante la limpieza y deployment de comandos:', error);
         process.exit(1);
     }
 }
