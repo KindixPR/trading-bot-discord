@@ -16,6 +16,9 @@ import { logTradingOperation, logTradingError, logger } from '../utils/logger.js
 // Mapa para almacenar el estado de la interacción por usuario
 const interactionState = new Map();
 
+// Mapa para prevenir ejecuciones múltiples
+const processingUsers = new Set();
+
 const data = new SlashCommandBuilder()
     .setName('entry')
     .setDescription('Crear una nueva operación de trading (Sistema Interactivo)');
@@ -23,6 +26,14 @@ const data = new SlashCommandBuilder()
 const permissions = ['ADMINISTRATOR'];
 
 async function execute(interaction) {
+    // Prevenir ejecuciones múltiples
+    if (processingUsers.has(interaction.user.id)) {
+        logger.warn(`Usuario ${interaction.user.tag} intentó ejecutar /entry mientras ya está en proceso`);
+        return;
+    }
+    
+    processingUsers.add(interaction.user.id);
+    
     try {
         // Deferir respuesta para evitar timeout
         await interaction.deferReply({ flags: 64 }); // 64 = EPHEMERAL
@@ -64,14 +75,17 @@ async function execute(interaction) {
     } catch (error) {
         logger.error('Error en comando entry interactivo:', error);
         // NO intentar responder aquí para evitar doble respuesta
+    } finally {
+        // Limpiar el estado de procesamiento después de 30 segundos
+        setTimeout(() => {
+            processingUsers.delete(interaction.user.id);
+        }, 30000);
     }
 }
 
 // Manejar interacciones de botones para entry
 async function handleButtonInteraction(interaction) {
-    // Deferir respuesta INMEDIATAMENTE para evitar timeout
-    await interaction.deferUpdate();
-    
+    // El deferUpdate ya se hizo en src/index.js
     try {
         const customId = interaction.customId;
         
@@ -224,8 +238,7 @@ async function handleModalSubmit(interaction) {
     try {
         if (interaction.customId !== 'trade_modal') return;
         
-        // Deferir respuesta para evitar timeout
-        await interaction.deferReply({ flags: 64 }); // 64 = EPHEMERAL
+        // El deferReply ya se hizo en src/index.js
         
         const userState = interactionState.get(interaction.user.id);
         

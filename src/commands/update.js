@@ -159,9 +159,7 @@ async function execute(interaction) {
 
 // Manejar interacciones de botones para update
 async function handleButtonInteraction(interaction) {
-    // Deferir respuesta INMEDIATAMENTE para evitar timeout
-    await interaction.deferUpdate();
-    
+    // El deferUpdate ya se hizo en src/index.js
     try {
         const customId = interaction.customId;
         
@@ -354,8 +352,7 @@ async function handleModalSubmit(interaction) {
     try {
         if (interaction.customId !== 'update_notes_modal') return;
         
-        // Deferir respuesta para evitar timeout
-        await interaction.deferReply({ flags: 64 }); // 64 = EPHEMERAL
+        // El deferReply ya se hizo en src/index.js
         
         const userState = updateInteractionState.get(interaction.user.id);
         

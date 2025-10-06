@@ -131,64 +131,58 @@ class TradingBot {
             return interaction.reply({ embeds: [embed], ephemeral: true });
         }
 
-        try {
-            await command.execute(interaction);
-            logger.info(`Comando ejecutado: ${interaction.commandName} por ${interaction.user.tag}`);
-        } catch (error) {
-            logger.error(`Error ejecutando comando ${interaction.commandName}:`, error);
-            
-            const embed = {
-                color: config.colors.error,
-                title: '❌ Error',
-                description: 'Hubo un error al ejecutar el comando. Por favor, inténtalo de nuevo.',
-                timestamp: new Date().toISOString()
-            };
-
-            try {
-                if (interaction.replied || interaction.deferred) {
-                    await interaction.followUp({ embeds: [embed], ephemeral: true });
-                } else {
-                    await interaction.reply({ embeds: [embed], ephemeral: true });
-                }
-            } catch (replyError) {
-                logger.error('Error al responder a la interacción en manejo global:', replyError);
-            }
-        }
+               try {
+                   await command.execute(interaction);
+                   logger.info(`Comando ejecutado: ${interaction.commandName} por ${interaction.user.tag}`);
+               } catch (error) {
+                   logger.error(`Error ejecutando comando ${interaction.commandName}:`, error);
+                   // NO intentar responder aquí para evitar conflictos
+               }
     }
 
-    // Método para manejar interacciones de botones
-    async handleButtonInteraction(interaction) {
-        try {
-            const customId = interaction.customId;
-            
-            if (customId.startsWith('asset_') || customId.startsWith('type_')) {
-                // Comando entry
-                const { default: entryCommand } = await import('./commands/entry.js');
-                if (entryCommand.handleButtonInteraction) {
-                    await entryCommand.handleButtonInteraction(interaction);
-                }
-            } else if (customId.startsWith('update_op_') || customId.startsWith('status_')) {
-                // Comando update
-                const { default: updateCommand } = await import('./commands/update.js');
-                if (updateCommand.handleButtonInteraction) {
-                    await updateCommand.handleButtonInteraction(interaction);
-                }
-            } else if (customId.startsWith('trades_')) {
-                // Comando trades
-                const { default: tradesCommand } = await import('./commands/trades.js');
-                if (tradesCommand.handleButtonInteraction) {
-                    await tradesCommand.handleButtonInteraction(interaction);
-                }
-            } else {
-                logger.warn(`Botón no reconocido: ${customId}`);
-            }
-        } catch (error) {
-            logger.error('Error en handleButtonInteraction:', error);
-        }
-    }
+           // Método para manejar interacciones de botones
+           async handleButtonInteraction(interaction) {
+               // Deferir la interacción INMEDIATAMENTE para evitar timeouts
+               await interaction.deferUpdate({ flags: 64 }); // EPHEMERAL
+               try {
+                   const customId = interaction.customId;
+                   
+                   if (customId.startsWith('asset_') || customId.startsWith('type_')) {
+                       // Comando entry
+                       const { default: entryCommand } = await import('./commands/entry.js');
+                       if (entryCommand.handleButtonInteraction) {
+                           await entryCommand.handleButtonInteraction(interaction);
+                       }
+                   } else if (customId.startsWith('update_op_') || customId.startsWith('status_')) {
+                       // Comando update
+                       const { default: updateCommand } = await import('./commands/update.js');
+                       if (updateCommand.handleButtonInteraction) {
+                           await updateCommand.handleButtonInteraction(interaction);
+                       }
+                   } else if (customId.startsWith('trades_')) {
+                       // Comando trades
+                       const { default: tradesCommand } = await import('./commands/trades.js');
+                       if (tradesCommand.handleButtonInteraction) {
+                           await tradesCommand.handleButtonInteraction(interaction);
+                       }
+                   } else {
+                       logger.warn(`Botón no reconocido: ${customId}`);
+                       await interaction.editReply({ content: '❌ Botón no reconocido.' });
+                   }
+               } catch (error) {
+                   logger.error('Error en handleButtonInteraction:', error);
+                   if (interaction.deferred || interaction.replied) {
+                       await interaction.editReply({ content: '❌ Hubo un error procesando tu selección. Por favor, inténtalo de nuevo.' });
+                   } else {
+                       await interaction.reply({ content: '❌ Hubo un error procesando tu selección. Por favor, inténtalo de nuevo.', flags: 64 });
+                   }
+               }
+           }
 
     // Método para manejar envío de modales
     async handleModalSubmit(interaction) {
+        // Deferir la interacción INMEDIATAMENTE para evitar timeouts
+        await interaction.deferReply({ flags: 64 }); // EPHEMERAL
         try {
             const customId = interaction.customId;
             
@@ -206,9 +200,15 @@ class TradingBot {
                 }
             } else {
                 logger.warn(`Modal no reconocido: ${customId}`);
+                await interaction.editReply({ content: '❌ Modal no reconocido.' });
             }
         } catch (error) {
             logger.error('Error en handleModalSubmit:', error);
+            if (interaction.deferred || interaction.replied) {
+                await interaction.editReply({ content: '❌ Hubo un error procesando tu envío. Por favor, inténtalo de nuevo.' });
+            } else {
+                await interaction.reply({ content: '❌ Hubo un error procesando tu envío. Por favor, inténtalo de nuevo.', flags: 64 });
+            }
         }
     }
 }
