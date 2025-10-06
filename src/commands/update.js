@@ -159,12 +159,10 @@ async function execute(interaction) {
 
 // Manejar interacciones de botones para update
 async function handleButtonInteraction(interaction) {
-    // El deferUpdate ya se hizo en src/index.js
     try {
         const customId = interaction.customId;
         
         if (customId.startsWith('update_op_')) {
-            
             // Paso 1: Operación seleccionada
             const operationId = customId.replace('update_op_', '');
             
@@ -172,7 +170,7 @@ async function handleButtonInteraction(interaction) {
             const operation = await database.getOperation(operationId);
             
             if (!operation) {
-                await interaction.editReply({
+                await interaction.update({
                     content: '❌ Error: No se encontró la operación seleccionada.',
                     components: []
                 });
@@ -239,7 +237,7 @@ async function handleButtonInteraction(interaction) {
                 timestamp: new Date()
             };
 
-            await interaction.editReply({ 
+            await interaction.update({ 
                 embeds: [embed], 
                 components: [statusRow, slRow] 
             });
@@ -253,7 +251,7 @@ async function handleButtonInteraction(interaction) {
             const userState = updateInteractionState.get(interaction.user.id);
             
             if (!userState || !userState.operationId) {
-                await interaction.editReply({
+                await interaction.update({
                     content: '❌ Error: No se encontró la operación seleccionada. Por favor, inicia el proceso nuevamente con `/update`.',
                     components: []
                 });
@@ -309,7 +307,7 @@ async function handleButtonInteraction(interaction) {
             updateInteractionState.delete(interaction.user.id);
             
                    // Primero confirmar privadamente
-                   await interaction.editReply({
+                   await interaction.update({
                        content: '✅ **Operación actualizada exitosamente!** Se está publicando al canal...',
                        components: []
                    });
@@ -352,7 +350,8 @@ async function handleModalSubmit(interaction) {
     try {
         if (interaction.customId !== 'update_notes_modal') return;
         
-        // El deferReply ya se hizo en src/index.js
+        // Deferir respuesta para modal
+        await interaction.deferReply({ ephemeral: true });
         
         const userState = updateInteractionState.get(interaction.user.id);
         

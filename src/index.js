@@ -142,8 +142,6 @@ class TradingBot {
 
            // Método para manejar interacciones de botones
            async handleButtonInteraction(interaction) {
-               // Deferir la interacción INMEDIATAMENTE para evitar timeouts
-               await interaction.deferUpdate({ flags: 64 }); // EPHEMERAL
                try {
                    const customId = interaction.customId;
                    
@@ -167,22 +165,16 @@ class TradingBot {
                        }
                    } else {
                        logger.warn(`Botón no reconocido: ${customId}`);
-                       await interaction.editReply({ content: '❌ Botón no reconocido.' });
+                       await interaction.reply({ content: '❌ Botón no reconocido.', ephemeral: true });
                    }
                } catch (error) {
                    logger.error('Error en handleButtonInteraction:', error);
-                   if (interaction.deferred || interaction.replied) {
-                       await interaction.editReply({ content: '❌ Hubo un error procesando tu selección. Por favor, inténtalo de nuevo.' });
-                   } else {
-                       await interaction.reply({ content: '❌ Hubo un error procesando tu selección. Por favor, inténtalo de nuevo.', flags: 64 });
-                   }
+                   // NO intentar responder aquí para evitar errores
                }
            }
 
     // Método para manejar envío de modales
     async handleModalSubmit(interaction) {
-        // Deferir la interacción INMEDIATAMENTE para evitar timeouts
-        await interaction.deferReply({ flags: 64 }); // EPHEMERAL
         try {
             const customId = interaction.customId;
             
@@ -200,15 +192,11 @@ class TradingBot {
                 }
             } else {
                 logger.warn(`Modal no reconocido: ${customId}`);
-                await interaction.editReply({ content: '❌ Modal no reconocido.' });
+                await interaction.reply({ content: '❌ Modal no reconocido.', ephemeral: true });
             }
         } catch (error) {
             logger.error('Error en handleModalSubmit:', error);
-            if (interaction.deferred || interaction.replied) {
-                await interaction.editReply({ content: '❌ Hubo un error procesando tu envío. Por favor, inténtalo de nuevo.' });
-            } else {
-                await interaction.reply({ content: '❌ Hubo un error procesando tu envío. Por favor, inténtalo de nuevo.', flags: 64 });
-            }
+            // NO intentar responder aquí para evitar errores
         }
     }
 }

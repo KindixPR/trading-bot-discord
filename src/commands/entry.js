@@ -85,17 +85,15 @@ async function execute(interaction) {
 
 // Manejar interacciones de botones para entry
 async function handleButtonInteraction(interaction) {
-    // El deferUpdate ya se hizo en src/index.js
     try {
         const customId = interaction.customId;
         
         if (customId.startsWith('asset_')) {
-            
             // Paso 1: Activo seleccionado
             const asset = customId.replace('asset_', '').toUpperCase();
             
             if (!isValidAsset(asset)) {
-                await interaction.editReply({
+                await interaction.update({
                     content: '❌ Error: Activo no válido.',
                     components: []
                 });
@@ -129,7 +127,7 @@ async function handleButtonInteraction(interaction) {
                 timestamp: new Date()
             };
 
-            await interaction.editReply({ 
+            await interaction.update({ 
                 embeds: [embed], 
                 components: [typeRow]
             });
@@ -143,7 +141,7 @@ async function handleButtonInteraction(interaction) {
             const userState = interactionState.get(interaction.user.id);
             
             if (!userState || !userState.asset) {
-                await interaction.editReply({
+                await interaction.update({
                     content: '❌ Error: No se encontró el activo seleccionado. Por favor, inicia el proceso nuevamente con `/entry`.',
                     components: []
                 });
@@ -151,7 +149,7 @@ async function handleButtonInteraction(interaction) {
             }
             
             if (!isValidOrderType(orderType)) {
-                await interaction.editReply({
+                await interaction.update({
                     content: '❌ Error: Tipo de orden no válido.',
                     components: []
                 });
@@ -238,7 +236,8 @@ async function handleModalSubmit(interaction) {
     try {
         if (interaction.customId !== 'trade_modal') return;
         
-        // El deferReply ya se hizo en src/index.js
+        // Deferir respuesta para modal
+        await interaction.deferReply({ ephemeral: true });
         
         const userState = interactionState.get(interaction.user.id);
         
