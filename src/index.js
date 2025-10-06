@@ -4,6 +4,7 @@ import { logger } from './utils/logger.js';
 import { database } from './database/database.js';
 import { loadCommands } from './utils/commandLoader.js';
 import { checkPermissions } from './utils/permissions.js';
+import { richPresenceConfig, getRandomMainActivity, getCommandActivity, getAssetActivity } from './config/richPresence.js';
 import server from './server.js';
 
 class TradingBot {
@@ -16,6 +17,66 @@ class TradingBot {
 
         this.commands = new Collection();
         this.setupEventHandlers();
+    }
+
+    // Sistema de Rich Presence dinámico y profesional
+    setupRichPresence() {
+        let currentIndex = 0;
+        
+        const updateActivity = () => {
+            const activity = richPresenceConfig.mainActivities[currentIndex];
+            const activityType = ActivityType[activity.type];
+            
+            this.client.user.setActivity(activity.name, {
+                type: activityType,
+                state: activity.state,
+                url: activity.url
+            });
+            
+            logger.info(`Rich Presence actualizado: ${activity.emoji} ${activity.name} - ${activity.state}`);
+            currentIndex = (currentIndex + 1) % richPresenceConfig.mainActivities.length;
+        };
+
+        // Establecer actividad inicial
+        updateActivity();
+        
+        // Cambiar cada 30 segundos
+        setInterval(updateActivity, richPresenceConfig.timing.mainRotationInterval);
+        
+        logger.info('✅ Rich Presence dinámico configurado exitosamente');
+    }
+
+    // Método para actualizar Rich Presence basado en actividad específica
+    async updateRichPresenceForOperation(operationType, asset = null) {
+        const activity = getCommandActivity(operationType);
+        
+        if (activity) {
+            const activityType = ActivityType[activity.type];
+            
+            // Si hay un activo específico, personalizar el mensaje
+            let displayName = activity.name;
+            let displayState = activity.state;
+            
+            if (asset && operationType === 'entry') {
+                const assetActivity = getAssetActivity(asset);
+                if (assetActivity) {
+                    displayName = `Nueva Operación ${asset}`;
+                    displayState = assetActivity.state;
+                }
+            }
+            
+            this.client.user.setActivity(displayName, {
+                type: activityType,
+                state: displayState
+            });
+            
+            logger.info(`Rich Presence temporal: ${activity.emoji} ${displayName} - ${displayState}`);
+            
+            // Volver al Rich Presence normal después del tiempo configurado
+            setTimeout(() => {
+                this.setupRichPresence();
+            }, richPresenceConfig.timing.commandDisplayDuration);
+        }
     }
 
     async start() {
@@ -41,10 +102,8 @@ class TradingBot {
         this.client.once(Events.ClientReady, (readyClient) => {
             logger.info(`Bot conectado como ${readyClient.user.tag}`);
             
-            // Establecer actividad del bot - Más profesional
-            this.client.user.setActivity('BDX Traders - Micro Futures', { 
-                type: ActivityType.Watching 
-            });
+            // Establecer actividad del bot - Rich Presence profesional
+            this.setupRichPresence();
         });
 
         // Evento de comandos slash
@@ -131,47 +190,50 @@ class TradingBot {
             return interaction.reply({ embeds: [embed], flags: 64 });
         }
 
-               try {
-                   await command.execute(interaction);
-                   logger.info(`Comando ejecutado: ${interaction.commandName} por ${interaction.user.tag}`);
-               } catch (error) {
-                   logger.error(`Error ejecutando comando ${interaction.commandName}:`, error);
-                   // NO intentar responder aquí para evitar conflictos
-               }
+        try {
+            // Actualizar Rich Presence basado en el comando
+            await this.updateRichPresenceForOperation(interaction.commandName);
+            
+            await command.execute(interaction);
+            logger.info(`Comando ejecutado: ${interaction.commandName} por ${interaction.user.tag}`);
+        } catch (error) {
+            logger.error(`Error ejecutando comando ${interaction.commandName}:`, error);
+            // NO intentar responder aquí para evitar conflictos
+        }
     }
 
-           // Método para manejar interacciones de botones
-           async handleButtonInteraction(interaction) {
-               try {
-                   const customId = interaction.customId;
-                   
-                   if (customId.startsWith('asset_') || customId.startsWith('type_')) {
-                       // Comando entry
-                       const { default: entryCommand } = await import('./commands/entry.js');
-                       if (entryCommand.handleButtonInteraction) {
-                           await entryCommand.handleButtonInteraction(interaction);
-                       }
-                   } else if (customId.startsWith('update_op_') || customId.startsWith('status_')) {
-                       // Comando update
-                       const { default: updateCommand } = await import('./commands/update.js');
-                       if (updateCommand.handleButtonInteraction) {
-                           await updateCommand.handleButtonInteraction(interaction);
-                       }
-                   } else if (customId.startsWith('trades_')) {
-                       // Comando trades
-                       const { default: tradesCommand } = await import('./commands/trades.js');
-                       if (tradesCommand.handleButtonInteraction) {
-                           await tradesCommand.handleButtonInteraction(interaction);
-                       }
-                   } else {
-                       logger.warn(`Botón no reconocido: ${customId}`);
-                       await interaction.reply({ content: '❌ Botón no reconocido.', flags: 64 });
-                   }
-               } catch (error) {
-                   logger.error('Error en handleButtonInteraction:', error);
-                   // NO intentar responder aquí para evitar errores
-               }
-           }
+    // Método para manejar interacciones de botones
+    async handleButtonInteraction(interaction) {
+        try {
+            const customId = interaction.customId;
+            
+            if (customId.startsWith('asset_') || customId.startsWith('type_')) {
+                // Comando entry
+                const { default: entryCommand } = await import('./commands/entry.js');
+                if (entryCommand.handleButtonInteraction) {
+                    await entryCommand.handleButtonInteraction(interaction);
+                }
+            } else if (customId.startsWith('update_op_') || customId.startsWith('status_')) {
+                // Comando update
+                const { default: updateCommand } = await import('./commands/update.js');
+                if (updateCommand.handleButtonInteraction) {
+                    await updateCommand.handleButtonInteraction(interaction);
+                }
+            } else if (customId.startsWith('trades_')) {
+                // Comando trades
+                const { default: tradesCommand } = await import('./commands/trades.js');
+                if (tradesCommand.handleButtonInteraction) {
+                    await tradesCommand.handleButtonInteraction(interaction);
+                }
+            } else {
+                logger.warn(`Botón no reconocido: ${customId}`);
+                await interaction.reply({ content: '❌ Botón no reconocido.', flags: 64 });
+            }
+        } catch (error) {
+            logger.error('Error en handleButtonInteraction:', error);
+            // NO intentar responder aquí para evitar errores
+        }
+    }
 
     // Método para manejar envío de modales
     async handleModalSubmit(interaction) {
