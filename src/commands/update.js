@@ -25,6 +25,32 @@ const updateInteractionState = new Map();
 // Sistema de locks por usuario para prevenir conflictos
 const updateUserLocks = new Map();
 
+// Mapa para almacenar timeouts de limpieza por usuario
+const updateUserTimeouts = new Map();
+
+// Función para limpiar el estado de un usuario
+function cleanupUpdateUserState(userId) {
+    updateUserLocks.delete(userId);
+    updateInteractionState.delete(userId);
+    updateUserTimeouts.delete(userId);
+    logger.info(`Estado de actualización limpiado para usuario ${userId}`);
+}
+
+// Función para resetear el timeout de un usuario
+function resetUpdateUserTimeout(userId) {
+    // Limpiar timeout anterior si existe
+    if (updateUserTimeouts.has(userId)) {
+        clearTimeout(updateUserTimeouts.get(userId));
+    }
+    
+    // Establecer nuevo timeout de 5 minutos (300000ms)
+    const timeoutId = setTimeout(() => {
+        cleanupUpdateUserState(userId);
+    }, 300000); // 5 minutos en lugar de 30 segundos
+    
+    updateUserTimeouts.set(userId, timeoutId);
+}
+
 // Función para generar mensajes específicos por estado
 function getStatusMessage(status, operation) {
     const assetInfo = getAssetInfo(operation.asset);
@@ -174,11 +200,8 @@ async function execute(interaction) {
             // NO intentar responder aquí para evitar doble respuesta
         }
     } finally {
-        // Limpiar el lock del usuario después de 30 segundos
-        setTimeout(() => {
-            updateUserLocks.delete(userId);
-            updateInteractionState.delete(userId);
-        }, 30000);
+        // Establecer timeout de limpieza de 5 minutos
+        resetUpdateUserTimeout(userId);
     }
 }
 
@@ -202,8 +225,9 @@ async function handleButtonInteraction(interaction) {
                 return;
             }
             
-            // Guardar estado
+            // Guardar estado y resetear timeout
             updateInteractionState.set(interaction.user.id, { operationId, operation });
+            resetUpdateUserTimeout(interaction.user.id);
             
             // Crear botones para estados
             const statusRow = new ActionRowBuilder()
@@ -276,13 +300,19 @@ async function handleButtonInteraction(interaction) {
             const userState = updateInteractionState.get(interaction.user.id);
             
             if (!userState || !userState.operationId) {
+                // Limpiar cualquier estado residual
+                cleanupUpdateUserState(interaction.user.id);
+                
                 await interaction.update({
-                    content: '❌ Error: No se encontró la operación seleccionada. Por favor, inicia el proceso nuevamente con `/update`.',
+                    content: '❌ **Sesión expirada**: No se encontró la operación seleccionada. La sesión puede haber expirado.\n\n🔄 **Solución**: Inicia el proceso nuevamente con `/update`.',
                     components: []
                 });
                 return;
             }
 
+            // Resetear timeout ya que el usuario está progresando
+            resetUpdateUserTimeout(interaction.user.id);
+            
             // Manejar botón de notas personalizadas
             if (newStatus === 'NOTES') {
                 // Crear modal para notas personalizadas
@@ -329,7 +359,7 @@ async function handleButtonInteraction(interaction) {
             };
             
             // Limpiar estado del usuario
-            updateInteractionState.delete(interaction.user.id);
+            cleanupUpdateUserState(interaction.user.id);
             
                    // Primero confirmar privadamente
                    await interaction.update({
@@ -394,9 +424,17 @@ async function handleModalSubmit(interaction) {
         
         const userState = updateInteractionState.get(interaction.user.id);
         
+        // Resetear timeout ya que el usuario está progresando
+        if (userState) {
+            resetUpdateUserTimeout(interaction.user.id);
+        }
+        
         if (!userState || !userState.operationId) {
+            // Limpiar cualquier estado residual
+            cleanupUpdateUserState(interaction.user.id);
+            
             await interaction.editReply({
-                content: '❌ Error: No se encontró la operación seleccionada. Por favor, inicia el proceso nuevamente con `/update`.'
+                content: '❌ **Sesión expirada**: No se encontró la operación seleccionada. La sesión puede haber expirado.\n\n🔄 **Solución**: Inicia el proceso nuevamente con `/update`.'
             });
             return;
         }
@@ -439,7 +477,7 @@ async function handleModalSubmit(interaction) {
         };
         
         // Limpiar estado del usuario
-        updateInteractionState.delete(interaction.user.id);
+        cleanupUpdateUserState(interaction.user.id);
         
         // Primero confirmar privadamente
         await interaction.editReply({

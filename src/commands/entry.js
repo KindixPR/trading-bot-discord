@@ -19,6 +19,32 @@ const interactionState = new Map();
 // Sistema de locks por usuario para prevenir conflictos
 const userLocks = new Map();
 
+// Mapa para almacenar timeouts de limpieza por usuario
+const userTimeouts = new Map();
+
+// Función para limpiar el estado de un usuario
+function cleanupUserState(userId) {
+    userLocks.delete(userId);
+    interactionState.delete(userId);
+    userTimeouts.delete(userId);
+    logger.info(`Estado limpiado para usuario ${userId}`);
+}
+
+// Función para resetear el timeout de un usuario
+function resetUserTimeout(userId) {
+    // Limpiar timeout anterior si existe
+    if (userTimeouts.has(userId)) {
+        clearTimeout(userTimeouts.get(userId));
+    }
+    
+    // Establecer nuevo timeout de 5 minutos (300000ms)
+    const timeoutId = setTimeout(() => {
+        cleanupUserState(userId);
+    }, 300000); // 5 minutos en lugar de 30 segundos
+    
+    userTimeouts.set(userId, timeoutId);
+}
+
 const data = new SlashCommandBuilder()
     .setName('entry')
     .setDescription('Crear una nueva operación de trading (Sistema Interactivo)');
@@ -84,11 +110,8 @@ async function execute(interaction) {
         logger.error('Error en comando entry interactivo:', error);
         // NO intentar responder aquí para evitar doble respuesta
     } finally {
-        // Limpiar el lock del usuario después de 30 segundos
-        setTimeout(() => {
-            userLocks.delete(userId);
-            interactionState.delete(userId);
-        }, 30000);
+        // Establecer timeout de limpieza de 5 minutos
+        resetUserTimeout(userId);
     }
 }
 
@@ -117,8 +140,9 @@ async function handleButtonInteraction(interaction) {
                 return;
             }
             
-            // Guardar estado
+            // Guardar estado y resetear timeout
             interactionState.set(interaction.user.id, { asset });
+            resetUserTimeout(interaction.user.id);
             
             // Crear botones para tipo de orden
             const typeRow = new ActionRowBuilder()
@@ -158,8 +182,11 @@ async function handleButtonInteraction(interaction) {
             const userState = interactionState.get(interaction.user.id);
             
             if (!userState || !userState.asset) {
+                // Limpiar cualquier estado residual
+                cleanupUserState(interaction.user.id);
+                
                 await interaction.update({
-                    content: '❌ Error: No se encontró el activo seleccionado. Por favor, inicia el proceso nuevamente con `/entry`.',
+                    content: '❌ **Sesión expirada**: No se encontró el activo seleccionado. La sesión puede haber expirado.\n\n🔄 **Solución**: Inicia el proceso nuevamente con `/entry`.',
                     components: []
                 });
                 return;
@@ -173,9 +200,10 @@ async function handleButtonInteraction(interaction) {
                 return;
             }
             
-            // Actualizar estado
+            // Actualizar estado y resetear timeout
             userState.orderType = orderType;
             interactionState.set(interaction.user.id, userState);
+            resetUserTimeout(interaction.user.id);
             
             // Crear modal para detalles de la operación
             const modal = new ModalBuilder()
@@ -273,8 +301,11 @@ async function handleModalSubmit(interaction) {
         const userState = interactionState.get(interaction.user.id);
         
         if (!userState || !userState.asset || !userState.orderType) {
+            // Limpiar cualquier estado residual
+            cleanupUserState(interaction.user.id);
+            
             await interaction.editReply({
-                content: '❌ Error: No se encontró la información de la operación. Por favor, inicia el proceso nuevamente con `/entry`.'
+                content: '❌ **Sesión expirada**: La información de la operación se perdió. Esto puede ocurrir si el proceso toma demasiado tiempo.\n\n🔄 **Solución**: Inicia el proceso nuevamente con `/entry` y completa los pasos más rápidamente.'
             });
             return;
         }
@@ -354,8 +385,7 @@ async function handleModalSubmit(interaction) {
         const embed = createTradeEntryEmbed(operationData);
 
         // Limpiar estado del usuario y lock
-        interactionState.delete(interaction.user.id);
-        userLocks.delete(interaction.user.id);
+        cleanupUserState(interaction.user.id);
 
         // Primero confirmar privadamente
         await interaction.editReply({
