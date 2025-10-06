@@ -220,12 +220,22 @@ async function execute(interaction) {
 
 // Manejar interacciones de botones para update
 async function handleButtonInteraction(interaction) {
+    // Verificar si la interacción ya fue respondida
+    if (interaction.replied || interaction.deferred) {
+        logger.warn(`Interacción de botón ya fue respondida para usuario ${interaction.user.tag}`);
+        return;
+    }
+    
     // Deferir respuesta INMEDIATAMENTE para evitar timeout
     try {
         await interaction.deferUpdate();
     } catch (error) {
         if (error.code === 10062) {
             logger.warn(`Interacción de botón expirada para usuario ${interaction.user.tag}`);
+            return;
+        }
+        if (error.code === 40060) {
+            logger.warn(`Interacción de botón ya fue reconocida para usuario ${interaction.user.tag}`);
             return;
         }
         throw error;
