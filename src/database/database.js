@@ -82,11 +82,17 @@ class Database {
             )`
         ];
 
-        for (const query of queries) {
-            await this.run(query);
+        try {
+            for (const query of queries) {
+                logger.info(`Ejecutando query: ${query.substring(0, 50)}...`);
+                await this.run(query);
+                logger.info('Query ejecutado correctamente');
+            }
+            logger.info('Tablas de la base de datos creadas/verificadas correctamente');
+        } catch (error) {
+            logger.error('Error creando tablas:', error);
+            throw error;
         }
-
-        logger.info('Tablas de la base de datos creadas/verificadas correctamente');
     }
 
     async run(query, params = []) {
