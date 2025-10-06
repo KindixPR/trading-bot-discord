@@ -118,15 +118,15 @@ class TradingBot {
             if (!operations || operations.length === 0) {
                 logger.info('🧪 No hay operaciones, creando operación de prueba...');
                 const testOperation = {
-                    operation_id: 'TEST-' + Date.now(),
+                    operationId: 'TEST-' + Date.now(),
                     asset: 'US30',
-                    order_type: 'BUY',
-                    entry_price: 35000.0,
-                    take_profit_1: 35100.0,
-                    stop_loss: 34900.0,
+                    orderType: 'BUY',
+                    entryPrice: 35000.0,
+                    takeProfit1: 35100.0,
+                    stopLoss: 34900.0,
                     status: 'OPEN',
                     notes: 'Operación de prueba - Sistema funcionando correctamente',
-                    created_by: 'system'
+                    createdBy: 'system'
                 };
                 
                 const createdOp = await database.createOperation(testOperation);

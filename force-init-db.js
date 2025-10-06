@@ -123,15 +123,15 @@ function createTables() {
                             if (countRow.count === 0) {
                                 console.log('🧪 Creando operación de prueba...');
                                 const testOperation = {
-                                    operation_id: 'TEST-' + Date.now(),
+                                    operationId: 'TEST-' + Date.now(),
                                     asset: 'US30',
-                                    order_type: 'BUY',
-                                    entry_price: 35000.0,
-                                    take_profit_1: 35100.0,
-                                    stop_loss: 34900.0,
+                                    orderType: 'BUY',
+                                    entryPrice: 35000.0,
+                                    takeProfit1: 35100.0,
+                                    stopLoss: 34900.0,
                                     status: 'OPEN',
                                     notes: 'Operación de prueba creada por force-init-db.js',
-                                    created_by: 'system'
+                                    createdBy: 'system'
                                 };
                                 
                                 const insertQuery = `INSERT INTO trading_operations 
@@ -139,15 +139,15 @@ function createTables() {
                                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
                                 
                                 db.run(insertQuery, [
-                                    testOperation.operation_id,
+                                    testOperation.operationId,
                                     testOperation.asset,
-                                    testOperation.order_type,
-                                    testOperation.entry_price,
-                                    testOperation.take_profit_1,
-                                    testOperation.stop_loss,
+                                    testOperation.orderType,
+                                    testOperation.entryPrice,
+                                    testOperation.takeProfit1,
+                                    testOperation.stopLoss,
                                     testOperation.status,
                                     testOperation.notes,
-                                    testOperation.created_by
+                                    testOperation.createdBy
                                 ], (err) => {
                                     if (err) {
                                         console.error('❌ Error creando operación de prueba:', err);
