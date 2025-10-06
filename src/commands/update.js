@@ -282,22 +282,41 @@ async function handleButtonInteraction(interaction) {
         return;
     }
     
-    // Deferir respuesta INMEDIATAMENTE para evitar timeout
-    try {
-        await interaction.deferUpdate();
-    } catch (error) {
-        if (error.code === 10062) {
-            logger.warn(`Interacción de botón expirada para usuario ${interaction.user.tag}`);
+    // Verificar el tipo de botón para decidir si hacer deferUpdate o no
+    const customId = interaction.customId;
+    const needsDeferUpdate = !customId.includes('NOTES');
+    
+    // Solo hacer deferUpdate si no es un botón que lleva a modal
+    if (needsDeferUpdate) {
+        try {
+            await interaction.deferUpdate();
+        } catch (error) {
+            if (error.code === 10062) {
+                logger.warn(`Interacción de botón expirada para usuario ${interaction.user.tag}`);
+                return;
+            }
+            if (error.code === 40060) {
+                logger.warn(`Interacción de botón ya fue reconocida para usuario ${interaction.user.tag}`);
+                return;
+            }
+            // Para otros errores, no hacer nada para evitar más errores
+            logger.error('Error en deferUpdate (update):', error);
             return;
         }
-        if (error.code === 40060) {
-            logger.warn(`Interacción de botón ya fue reconocida para usuario ${interaction.user.tag}`);
-            return;
-        }
-        // Para otros errores, no hacer nada para evitar más errores
-        logger.error('Error en deferUpdate (update):', error);
-        return;
     }
+    
+    // Helper function para responder correctamente
+    const respondToInteraction = async (content, options = {}) => {
+        try {
+            if (needsDeferUpdate) {
+                await interaction.editReply({ content, ...options });
+            } else {
+                await interaction.reply({ content, ...options, flags: 64 });
+            }
+        } catch (error) {
+            logger.error('Error respondiendo a interacción:', error);
+        }
+    };
     
     try {
         const customId = interaction.customId;
@@ -310,8 +329,7 @@ async function handleButtonInteraction(interaction) {
             const operation = await database.getOperation(operationId);
             
             if (!operation) {
-                await interaction.editReply({
-                    content: '❌ Error: No se encontró la operación seleccionada.',
+                await respondToInteraction('❌ Error: No se encontró la operación seleccionada.', {
                     components: []
                 });
                 return;
@@ -431,8 +449,7 @@ async function handleButtonInteraction(interaction) {
             const updatedOperation = await database.updateOperation(userState.operationId, { status: newStatus });
             
             if (!updatedOperation) {
-                await interaction.editReply({
-                    content: '❌ Error: No se pudo actualizar la operación.',
+                await respondToInteraction('❌ Error: No se pudo actualizar la operación.', {
                     components: []
                 });
                 return;
@@ -535,8 +552,9 @@ async function handleModalSubmit(interaction) {
         const customNotes = interaction.fields.getTextInputValue('custom_notes');
         
         if (!customNotes || customNotes.trim().length === 0) {
-            await interaction.editReply({
-                content: '❌ Error: Debes escribir un mensaje personalizado.'
+            await interaction.reply({
+                content: '❌ Error: Debes escribir un mensaje personalizado.',
+                flags: 64
             });
             return;
         }
@@ -547,8 +565,9 @@ async function handleModalSubmit(interaction) {
         });
         
         if (!updatedOperation) {
-            await interaction.editReply({
-                content: '❌ Error: No se pudo actualizar la operación.'
+            await interaction.reply({
+                content: '❌ Error: No se pudo actualizar la operación.',
+                flags: 64
             });
             return;
         }
@@ -572,8 +591,9 @@ async function handleModalSubmit(interaction) {
         cleanupUpdateUserState(interaction.user.id);
         
         // Primero confirmar privadamente
-        await interaction.editReply({
-            content: '✅ **Mensaje personalizado enviado exitosamente!**'
+        await interaction.reply({
+            content: '✅ **Mensaje personalizado enviado exitosamente!**',
+            flags: 64
         });
 
         // Luego enviar al canal público
