@@ -75,6 +75,9 @@ function getStatusMessage(status, operation) {
 
 async function execute(interaction) {
     try {
+        // Deferir respuesta para evitar timeout
+        await interaction.deferReply({ ephemeral: true });
+        
         logger.info(`Comando /update ejecutado por ${interaction.user.tag}`);
         
         // Obtener operaciones abiertas
@@ -82,7 +85,7 @@ async function execute(interaction) {
         
         if (!openOperations || openOperations.length === 0) {
             const embed = createErrorEmbed('Sin Operaciones', 'No hay operaciones abiertas para actualizar.');
-            await interaction.reply({ embeds: [embed], ephemeral: true });
+            await interaction.editReply({ embeds: [embed] });
             return;
         }
 
@@ -127,13 +130,12 @@ async function execute(interaction) {
             footer: {
                 text: `Sistema Interactivo - ${operationsToShow.length} de ${openOperations.length} operaciones mostradas`
             },
-            timestamp: new Date().toISOString()
+            timestamp: new Date()
         };
 
-        await interaction.reply({ 
+        await interaction.editReply({ 
             embeds: [embed], 
-            components: operationRows,
-            ephemeral: true 
+            components: operationRows
         });
 
         logger.info(`Sistema de actualización iniciado por ${interaction.user.tag}`);
@@ -231,7 +233,7 @@ async function handleButtonInteraction(interaction) {
                 footer: {
                     text: `Operación: ${operationId} | Sistema Interactivo`
                 },
-                timestamp: new Date().toISOString()
+                timestamp: new Date()
             };
 
             await interaction.update({ 

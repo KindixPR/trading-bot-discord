@@ -24,6 +24,9 @@ const permissions = ['ADMINISTRATOR'];
 
 async function execute(interaction) {
     try {
+        // Deferir respuesta para evitar timeout
+        await interaction.deferReply({ ephemeral: true });
+        
         // Iniciar el proceso interactivo con la selección de activo
         const assetRow = new ActionRowBuilder()
             .addComponents(
@@ -51,10 +54,9 @@ async function execute(interaction) {
             timestamp: new Date()
         };
 
-        await interaction.reply({ 
+        await interaction.editReply({ 
             embeds: [embed], 
-            components: [assetRow],
-            ephemeral: true // Solo el usuario ve esto
+            components: [assetRow]
         });
 
         logger.info(`Sistema interactivo iniciado por ${interaction.user.tag}`);

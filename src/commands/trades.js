@@ -13,6 +13,9 @@ const permissions = ['ADMINISTRATOR'];
 
 async function execute(interaction) {
     try {
+        // Deferir respuesta para evitar timeout
+        await interaction.deferReply({ ephemeral: true });
+        
         logger.info(`Comando /trades ejecutado por ${interaction.user.tag}`);
         
         // Obtener todas las operaciones
@@ -20,7 +23,7 @@ async function execute(interaction) {
         
         if (!allOperations || allOperations.length === 0) {
             const embed = createErrorEmbed('Sin Operaciones', 'No hay operaciones registradas.');
-            await interaction.reply({ embeds: [embed], ephemeral: true });
+            await interaction.editReply({ embeds: [embed] });
             return;
         }
 
@@ -90,10 +93,9 @@ async function execute(interaction) {
                     .setStyle(ButtonStyle.Secondary)
             );
 
-        await interaction.reply({ 
+        await interaction.editReply({ 
             embeds: [embed], 
-            components: [navRow, actionRow],
-            ephemeral: true 
+            components: [navRow, actionRow]
         });
 
         logger.info(`Dashboard de operaciones mostrado por ${interaction.user.tag}`);
