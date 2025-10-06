@@ -2,7 +2,6 @@ import { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, Moda
 import { database } from '../database/database.js';
 import { createTradeUpdateEmbed, createErrorEmbed, createSuccessEmbed } from '../utils/embeds.js';
 import { 
-    generateOperationId, 
     isValidAsset, 
     isValidOrderType, 
     isValidPrice,

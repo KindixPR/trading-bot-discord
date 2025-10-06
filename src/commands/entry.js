@@ -350,7 +350,7 @@ async function handleModalSubmit(interaction) {
         }
 
         // Generar ID de operación
-        const operationId = generateOperationId(userState.asset, userState.orderType);
+        const operationId = generateOperationId();
 
         // Crear objeto de operación
         const operationData = {
