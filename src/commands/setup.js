@@ -10,8 +10,16 @@ const permissions = ['ADMINISTRATOR'];
 
 async function execute(interaction) {
     try {
-        // Deferir respuesta para evitar timeout
-        await interaction.deferReply({ flags: 64 }); // 64 = EPHEMERAL
+        // Deferir respuesta INMEDIATAMENTE para evitar timeout
+        try {
+            await interaction.deferReply({ flags: 64 }); // 64 = EPHEMERAL
+        } catch (error) {
+            if (error.code === 10062) {
+                logger.warn(`Interacción expirada para usuario ${interaction.user.tag} antes de poder responder`);
+                return;
+            }
+            throw error;
+        }
 
         logger.info(`Comando /setup ejecutado por ${interaction.user.tag}`);
 

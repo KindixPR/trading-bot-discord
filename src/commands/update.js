@@ -216,6 +216,17 @@ async function execute(interaction) {
 
 // Manejar interacciones de botones para update
 async function handleButtonInteraction(interaction) {
+    // Deferir respuesta INMEDIATAMENTE para evitar timeout
+    try {
+        await interaction.deferUpdate();
+    } catch (error) {
+        if (error.code === 10062) {
+            logger.warn(`Interacción de botón expirada para usuario ${interaction.user.tag}`);
+            return;
+        }
+        throw error;
+    }
+    
     try {
         const customId = interaction.customId;
         
@@ -227,7 +238,7 @@ async function handleButtonInteraction(interaction) {
             const operation = await database.getOperation(operationId);
             
             if (!operation) {
-                await interaction.update({
+                await interaction.editReply({
                     content: '❌ Error: No se encontró la operación seleccionada.',
                     components: []
                 });
@@ -295,7 +306,7 @@ async function handleButtonInteraction(interaction) {
                 timestamp: new Date()
             };
 
-            await interaction.update({ 
+            await interaction.editReply({ 
                 embeds: [embed], 
                 components: [statusRow, slRow] 
             });
@@ -312,7 +323,7 @@ async function handleButtonInteraction(interaction) {
                 // Limpiar cualquier estado residual
                 cleanupUpdateUserState(interaction.user.id);
                 
-                await interaction.update({
+                await interaction.editReply({
                     content: '❌ **Sesión expirada**: No se encontró la operación seleccionada. La sesión puede haber expirado.\n\n🔄 **Solución**: Inicia el proceso nuevamente con `/update`.',
                     components: []
                 });
@@ -348,7 +359,7 @@ async function handleButtonInteraction(interaction) {
             const updatedOperation = await database.updateOperation(userState.operationId, { status: newStatus });
             
             if (!updatedOperation) {
-                await interaction.update({
+                await interaction.editReply({
                     content: '❌ Error: No se pudo actualizar la operación.',
                     components: []
                 });
@@ -371,7 +382,7 @@ async function handleButtonInteraction(interaction) {
             cleanupUpdateUserState(interaction.user.id);
             
                    // Primero confirmar privadamente
-                   await interaction.update({
+                   await interaction.editReply({
                        content: '✅ **Operación actualizada exitosamente!** Se está publicando al canal...',
                        components: []
                    });
@@ -397,7 +408,7 @@ async function handleButtonInteraction(interaction) {
                     flags: 64 // 64 = EPHEMERAL
                 });
             } else {
-                await interaction.update({
+                await interaction.editReply({
                     content: '❌ Hubo un error procesando tu selección. Por favor, inténtalo de nuevo.',
                     components: []
                 });

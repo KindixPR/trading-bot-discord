@@ -128,9 +128,25 @@ async function execute(interaction) {
 async function handleButtonInteraction(interaction) {
     const userId = interaction.user.id;
     
+    // Deferir respuesta INMEDIATAMENTE para evitar timeout
+    try {
+        await interaction.deferUpdate();
+    } catch (error) {
+        if (error.code === 10062) {
+            logger.warn(`Interacción de botón expirada para usuario ${interaction.user.tag}`);
+            return;
+        }
+        throw error;
+    }
+    
     // Verificar si el usuario tiene un lock activo
     if (!userLocks.has(userId)) {
         logger.warn(`Usuario ${interaction.user.tag} intentó usar botón sin lock activo`);
+        try {
+            await interaction.editReply({ content: '❌ Sesión expirada. Inicia el proceso nuevamente con `/entry`.', components: [] });
+        } catch (editError) {
+            logger.error('Error editando respuesta de botón:', editError);
+        }
         return;
     }
     
@@ -142,7 +158,7 @@ async function handleButtonInteraction(interaction) {
             const asset = customId.replace('asset_', '').toUpperCase();
             
             if (!isValidAsset(asset)) {
-                await interaction.update({
+                await interaction.editReply({
                     content: '❌ Error: Activo no válido.',
                     components: []
                 });
@@ -177,7 +193,7 @@ async function handleButtonInteraction(interaction) {
                 timestamp: new Date()
             };
 
-            await interaction.update({ 
+            await interaction.editReply({ 
                 embeds: [embed], 
                 components: [typeRow]
             });
@@ -194,7 +210,7 @@ async function handleButtonInteraction(interaction) {
                 // Limpiar cualquier estado residual
                 cleanupUserState(interaction.user.id);
                 
-                await interaction.update({
+                await interaction.editReply({
                     content: '❌ **Sesión expirada**: No se encontró el activo seleccionado. La sesión puede haber expirado.\n\n🔄 **Solución**: Inicia el proceso nuevamente con `/entry`.',
                     components: []
                 });
@@ -202,7 +218,7 @@ async function handleButtonInteraction(interaction) {
             }
             
             if (!isValidOrderType(orderType)) {
-                await interaction.update({
+                await interaction.editReply({
                     content: '❌ Error: Tipo de orden no válido.',
                     components: []
                 });
