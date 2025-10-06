@@ -105,11 +105,22 @@ function getStatusMessage(status, operation) {
 async function execute(interaction) {
     const userId = interaction.user.id;
     
+    // Deferir respuesta INMEDIATAMENTE para evitar timeout
+    try {
+        await interaction.deferReply({ flags: 64 });
+    } catch (error) {
+        if (error.code === 10062) {
+            logger.warn(`Interacción expirada para usuario ${interaction.user.tag} antes de poder responder`);
+            return;
+        }
+        throw error;
+    }
+    
     // Verificar si el usuario ya tiene un lock activo
     if (updateUserLocks.has(userId)) {
         logger.warn(`Usuario ${interaction.user.tag} intentó ejecutar /update mientras ya está en proceso`);
         try {
-            await interaction.reply({ content: '⏳ Ya tienes una actualización en proceso. Espera a que termine.', flags: 64 });
+            await interaction.editReply({ content: '⏳ Ya tienes una actualización en proceso. Espera a que termine.' });
         } catch (error) {
             logger.error('Error respondiendo a usuario bloqueado:', error);
         }
@@ -120,8 +131,6 @@ async function execute(interaction) {
     updateUserLocks.set(userId, Date.now());
     
     try {
-        // Deferir respuesta para evitar timeout
-        await interaction.deferReply({ flags: 64 });
         
         logger.info(`Comando /update ejecutado por ${interaction.user.tag}`);
         
