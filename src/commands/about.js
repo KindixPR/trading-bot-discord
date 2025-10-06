@@ -1,6 +1,7 @@
 import { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { config } from '../config/config.js';
 import { logger } from '../utils/logger.js';
+import { database } from '../database/database.js';
 
 const data = new SlashCommandBuilder()
     .setName('about')
