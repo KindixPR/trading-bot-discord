@@ -32,7 +32,7 @@ async function execute(interaction) {
     if (userLocks.has(userId)) {
         logger.warn(`Usuario ${interaction.user.tag} intentó ejecutar /entry mientras ya está en proceso`);
         try {
-            await interaction.reply({ content: '⏳ Ya tienes una operación en proceso. Espera a que termine.', ephemeral: true });
+            await interaction.reply({ content: '⏳ Ya tienes una operación en proceso. Espera a que termine.', flags: 64 });
         } catch (error) {
             logger.error('Error respondiendo a usuario bloqueado:', error);
         }
@@ -44,7 +44,7 @@ async function execute(interaction) {
     
     try {
         // Deferir respuesta para evitar timeout
-        await interaction.deferReply({ flags: 64 }); // 64 = EPHEMERAL
+        await interaction.deferReply({ flags: 64 });
         
         // Iniciar el proceso interactivo con la selección de activo
         const assetRow = new ActionRowBuilder()
@@ -254,7 +254,7 @@ async function handleModalSubmit(interaction) {
         if (interaction.customId !== 'trade_modal') return;
         
         // Deferir respuesta para modal
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: 64 });
         
         const userState = interactionState.get(interaction.user.id);
         

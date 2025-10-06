@@ -83,7 +83,7 @@ async function execute(interaction) {
     if (updateUserLocks.has(userId)) {
         logger.warn(`Usuario ${interaction.user.tag} intentó ejecutar /update mientras ya está en proceso`);
         try {
-            await interaction.reply({ content: '⏳ Ya tienes una actualización en proceso. Espera a que termine.', ephemeral: true });
+            await interaction.reply({ content: '⏳ Ya tienes una actualización en proceso. Espera a que termine.', flags: 64 });
         } catch (error) {
             logger.error('Error respondiendo a usuario bloqueado:', error);
         }
@@ -95,7 +95,7 @@ async function execute(interaction) {
     
     try {
         // Deferir respuesta para evitar timeout
-        await interaction.deferReply({ flags: 64 }); // 64 = EPHEMERAL
+        await interaction.deferReply({ flags: 64 });
         
         logger.info(`Comando /update ejecutado por ${interaction.user.tag}`);
         
@@ -376,7 +376,7 @@ async function handleModalSubmit(interaction) {
         if (interaction.customId !== 'update_notes_modal') return;
         
         // Deferir respuesta para modal
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: 64 });
         
         const userState = updateInteractionState.get(interaction.user.id);
         

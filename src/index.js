@@ -128,7 +128,7 @@ class TradingBot {
                 timestamp: new Date().toISOString()
             };
             
-            return interaction.reply({ embeds: [embed], ephemeral: true });
+            return interaction.reply({ embeds: [embed], flags: 64 });
         }
 
                try {
@@ -165,7 +165,7 @@ class TradingBot {
                        }
                    } else {
                        logger.warn(`Botón no reconocido: ${customId}`);
-                       await interaction.reply({ content: '❌ Botón no reconocido.', ephemeral: true });
+                       await interaction.reply({ content: '❌ Botón no reconocido.', flags: 64 });
                    }
                } catch (error) {
                    logger.error('Error en handleButtonInteraction:', error);
@@ -192,7 +192,7 @@ class TradingBot {
                 }
             } else {
                 logger.warn(`Modal no reconocido: ${customId}`);
-                await interaction.reply({ content: '❌ Modal no reconocido.', ephemeral: true });
+                await interaction.reply({ content: '❌ Modal no reconocido.', flags: 64 });
             }
         } catch (error) {
             logger.error('Error en handleModalSubmit:', error);
