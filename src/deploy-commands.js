@@ -29,7 +29,7 @@ async function deployCommands() {
             logger.info('✅ Comandos globales eliminados.');
         }
 
-        // PASO 2: Cargar solo los 3 comandos principales
+        // PASO 2: Cargar todos los comandos disponibles
         const commands = new Map();
         await loadCommands(commands);
         
