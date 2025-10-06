@@ -139,7 +139,10 @@ class Database {
         try {
             const result = await this.run(query, params);
             logger.info(`Operación creada: ${operationId}`);
-            return result;
+            
+            // Obtener y devolver la operación creada
+            const createdOperation = await this.getOperation(operationId);
+            return createdOperation;
         } catch (error) {
             logger.error('Error creando operación:', error);
             throw error;
@@ -161,7 +164,7 @@ class Database {
             params.push(status);
         }
         if (takeProfit !== undefined) {
-            setClause.push('take_profit = ?');
+            setClause.push('take_profit_1 = ?');
             params.push(takeProfit);
         }
         if (stopLoss !== undefined) {
@@ -189,8 +192,13 @@ class Database {
     }
 
     async getActiveOperations() {
-        const query = 'SELECT * FROM trading_operations WHERE status IN ("OPEN", "BE", "TP1", "TP2", "TP3") ORDER BY created_at DESC';
-        return await this.all(query);
+        const query = "SELECT * FROM trading_operations WHERE status IN ('OPEN', 'BE', 'TP1', 'TP2', 'TP3') ORDER BY created_at DESC";
+        const operations = await this.all(query);
+        logger.info(`getActiveOperations: Encontradas ${operations ? operations.length : 0} operaciones activas`);
+        if (operations && operations.length > 0) {
+            logger.info(`Primera operación: ${JSON.stringify(operations[0])}`);
+        }
+        return operations;
     }
 
     async getOperationsByAsset(asset) {
@@ -199,13 +207,44 @@ class Database {
     }
 
     async getClosedOperations() {
-        const query = 'SELECT * FROM trading_operations WHERE status = "CLOSED" ORDER BY created_at DESC';
+        const query = "SELECT * FROM trading_operations WHERE status = 'CLOSED' ORDER BY created_at DESC";
         return await this.all(query);
     }
 
     async getAllOperations() {
         const query = 'SELECT * FROM trading_operations ORDER BY created_at DESC';
-        return await this.all(query);
+        const operations = await this.all(query);
+        logger.info(`getAllOperations: Encontradas ${operations ? operations.length : 0} operaciones totales`);
+        if (operations && operations.length > 0) {
+            logger.info(`Primera operación: ${JSON.stringify(operations[0])}`);
+        }
+        return operations;
+    }
+
+    // Función de debugging para verificar el estado de la base de datos
+    async debugDatabase() {
+        try {
+            const allOps = await this.getAllOperations();
+            const activeOps = await this.getActiveOperations();
+            const closedOps = await this.getClosedOperations();
+            
+            logger.info('=== DEBUG DATABASE ===');
+            logger.info(`Total operaciones: ${allOps ? allOps.length : 0}`);
+            logger.info(`Operaciones activas: ${activeOps ? activeOps.length : 0}`);
+            logger.info(`Operaciones cerradas: ${closedOps ? closedOps.length : 0}`);
+            
+            if (allOps && allOps.length > 0) {
+                logger.info('Estados de operaciones:');
+                const statusCounts = {};
+                allOps.forEach(op => {
+                    statusCounts[op.status] = (statusCounts[op.status] || 0) + 1;
+                });
+                logger.info(JSON.stringify(statusCounts, null, 2));
+            }
+            logger.info('=== END DEBUG ===');
+        } catch (error) {
+            logger.error('Error en debugDatabase:', error);
+        }
     }
 
     async getOperationUpdates(operationId) {

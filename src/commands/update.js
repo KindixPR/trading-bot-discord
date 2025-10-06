@@ -134,10 +134,14 @@ async function execute(interaction) {
         
         logger.info(`Comando /update ejecutado por ${interaction.user.tag}`);
         
+        // Debug: Verificar estado de la base de datos
+        await database.debugDatabase();
+        
         // Obtener operaciones abiertas
         const openOperations = await database.getActiveOperations();
         
         if (!openOperations || openOperations.length === 0) {
+            logger.warn(`No se encontraron operaciones activas para usuario ${interaction.user.tag}`);
             const embed = createErrorEmbed('Sin Operaciones', 'No hay operaciones abiertas para actualizar.');
             await interaction.editReply({ embeds: [embed] });
             return;

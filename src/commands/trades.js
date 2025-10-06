@@ -26,10 +26,14 @@ async function execute(interaction) {
         
         logger.info(`Comando /trades ejecutado por ${interaction.user.tag}`);
         
+        // Debug: Verificar estado de la base de datos
+        await database.debugDatabase();
+        
         // Obtener todas las operaciones
         const allOperations = await database.getAllOperations();
         
         if (!allOperations || allOperations.length === 0) {
+            logger.warn(`No se encontraron operaciones para usuario ${interaction.user.tag}`);
             const embed = createErrorEmbed('Sin Operaciones', 'No hay operaciones registradas.');
             await interaction.editReply({ embeds: [embed] });
             return;
