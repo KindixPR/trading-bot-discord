@@ -152,18 +152,20 @@ async function execute(interaction) {
             }
         } catch (replyError) {
             logger.error('Error al responder en update interactivo:', replyError);
+            // NO intentar responder aquí para evitar doble respuesta
         }
     }
 }
 
 // Manejar interacciones de botones para update
 async function handleButtonInteraction(interaction) {
+    // Deferir respuesta INMEDIATAMENTE para evitar timeout
+    await interaction.deferUpdate();
+    
     try {
         const customId = interaction.customId;
         
         if (customId.startsWith('update_op_')) {
-            // Deferir respuesta para evitar timeout
-            await interaction.deferUpdate();
             
             // Paso 1: Operación seleccionada
             const operationId = customId.replace('update_op_', '');
@@ -247,8 +249,6 @@ async function handleButtonInteraction(interaction) {
             logger.info(`Usuario ${interaction.user.tag} seleccionó operación: ${operationId}`);
 
         } else if (customId.startsWith('status_')) {
-            // Deferir respuesta para evitar timeout
-            await interaction.deferUpdate();
             
             // Paso 2: Estado seleccionado
             const newStatus = customId.replace('status_', '').toUpperCase();
@@ -344,6 +344,7 @@ async function handleButtonInteraction(interaction) {
             }
         } catch (replyError) {
             logger.error('Error al responder en handleButtonInteraction (update):', replyError);
+            // NO intentar responder aquí para evitar doble respuesta
         }
     }
 }

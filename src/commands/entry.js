@@ -63,23 +63,19 @@ async function execute(interaction) {
 
     } catch (error) {
         logger.error('Error en comando entry interactivo:', error);
-        const errorEmbed = createErrorEmbed('Error', 'Hubo un error al iniciar el proceso de entrada. Por favor, inténtalo de nuevo.');
-        if (interaction.replied || interaction.deferred) {
-            await interaction.followUp({ embeds: [errorEmbed], flags: 64 }); // 64 = EPHEMERAL
-        } else {
-            await interaction.reply({ embeds: [errorEmbed], flags: 64 }); // 64 = EPHEMERAL
-        }
+        // NO intentar responder aquí para evitar doble respuesta
     }
 }
 
 // Manejar interacciones de botones para entry
 async function handleButtonInteraction(interaction) {
+    // Deferir respuesta INMEDIATAMENTE para evitar timeout
+    await interaction.deferUpdate();
+    
     try {
         const customId = interaction.customId;
         
         if (customId.startsWith('asset_')) {
-            // Deferir respuesta para evitar timeout
-            await interaction.deferUpdate();
             
             // Paso 1: Activo seleccionado
             const asset = customId.replace('asset_', '').toUpperCase();
@@ -127,8 +123,6 @@ async function handleButtonInteraction(interaction) {
             logger.info(`Usuario ${interaction.user.tag} seleccionó activo: ${asset}`);
 
         } else if (customId.startsWith('type_')) {
-            // Deferir respuesta para evitar timeout
-            await interaction.deferUpdate();
             
             // Paso 2: Tipo seleccionado
             const orderType = customId.replace('type_', '');
@@ -221,22 +215,7 @@ async function handleButtonInteraction(interaction) {
         }
     } catch (error) {
         logger.error('Error en handleButtonInteraction (entry):', error);
-        
-        try {
-            if (interaction.replied || interaction.deferred) {
-                await interaction.followUp({
-                    content: '❌ Hubo un error procesando tu selección. Por favor, inténtalo de nuevo.',
-                    flags: 64 // 64 = EPHEMERAL
-                });
-            } else {
-                await interaction.update({
-                    content: '❌ Hubo un error procesando tu selección. Por favor, inténtalo de nuevo.',
-                    components: []
-                });
-            }
-        } catch (replyError) {
-            logger.error('Error al responder en handleButtonInteraction (entry):', replyError);
-        }
+        // NO intentar responder aquí para evitar doble respuesta
     }
 }
 
@@ -346,21 +325,7 @@ async function handleModalSubmit(interaction) {
 
     } catch (error) {
         logger.error('Error en handleModalSubmit (entry):', error);
-        
-        try {
-            if (interaction.replied || interaction.deferred) {
-                await interaction.editReply({
-                    content: '❌ Hubo un error creando la operación. Por favor, inténtalo de nuevo.'
-                });
-            } else {
-                await interaction.reply({
-                    content: '❌ Hubo un error creando la operación. Por favor, inténtalo de nuevo.',
-                    flags: 64 // 64 = EPHEMERAL
-                });
-            }
-        } catch (replyError) {
-            logger.error('Error al responder en handleModalSubmit (entry):', replyError);
-        }
+        // NO intentar responder aquí para evitar doble respuesta
     }
 }
 
