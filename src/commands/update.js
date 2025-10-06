@@ -128,13 +128,31 @@ async function execute(interaction) {
     
     // AHORA verificar si el usuario ya tiene un lock activo
     if (updateUserLocks.has(userId)) {
-        logger.warn(`Usuario ${interaction.user.tag} intentó ejecutar /update mientras ya está en proceso`);
+        const lockTime = updateUserLocks.get(userId);
+        const timeSinceLock = Date.now() - lockTime;
+        const minutesSinceLock = Math.floor(timeSinceLock / 60000);
+        
+        logger.warn(`Usuario ${interaction.user.tag} intentó ejecutar /update mientras ya está en proceso (hace ${minutesSinceLock} minutos)`);
+        
         try {
-            await interaction.editReply({ content: '⏳ Ya tienes una actualización en proceso. Espera a que termine.' });
+            if (timeSinceLock > 300000) { // 5 minutos
+                // Si el lock tiene más de 5 minutos, limpiarlo automáticamente
+                logger.warn(`Limpiando lock antiguo para usuario ${interaction.user.tag} (${minutesSinceLock} minutos)`);
+                updateUserLocks.delete(userId);
+                updateUserTimeouts.delete(userId);
+                await interaction.editReply({ 
+                    content: '🔄 Sesión anterior expirada. Iniciando nueva actualización...' 
+                });
+            } else {
+                await interaction.editReply({ 
+                    content: `⏳ Ya tienes una actualización en proceso desde hace ${minutesSinceLock} minuto(s). Espera a que termine o usa \`/clear\` si está atascado.` 
+                });
+                return;
+            }
         } catch (error) {
             logger.error('Error editando respuesta de usuario bloqueado:', error);
+            return;
         }
-        return;
     }
     
     // Crear lock para el usuario
