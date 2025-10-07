@@ -278,10 +278,6 @@ class TradingBot {
                 if (tradesCommand.handleButtonInteraction) {
                     await tradesCommand.handleButtonInteraction(interaction);
                 }
-            } else if (customId.startsWith('setup_') || customId.startsWith('reset_')) {
-                // Comando setup
-                const { handleSetupButtonInteraction } = await import('./utils/setup-interactions.js');
-                await handleSetupButtonInteraction(interaction);
             } else {
                 logger.warn(`Botón no reconocido: ${customId}`);
                 await interaction.reply({ content: '❌ Botón no reconocido.', flags: 64 });
