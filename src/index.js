@@ -95,6 +95,17 @@ class TradingBot {
             logger.info('🔄 Registrando comandos en Discord...');
             await deployCommands();
             logger.info('✅ Comandos registrados en Discord');
+            
+            // Forzar limpieza adicional después de 5 segundos
+            setTimeout(async () => {
+                try {
+                    logger.info('🧹 Ejecutando limpieza adicional de comandos...');
+                    await deployCommands();
+                    logger.info('✅ Limpieza adicional completada');
+                } catch (error) {
+                    logger.error('Error en limpieza adicional:', error);
+                }
+            }, 5000);
 
             // Conectar al bot
             await this.client.login(config.discord.token);

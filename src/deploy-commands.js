@@ -10,24 +10,35 @@ async function deployCommands() {
         // Crear instancia REST
         const rest = new REST({ version: '10' }).setToken(config.discord.token);
 
-        // PASO 1: Limpiar TODOS los comandos existentes
-        logger.info('🗑️ Limpiando comandos antiguos...');
+        // PASO 1: Limpiar TODOS los comandos existentes (más agresivo)
+        logger.info('🗑️ Limpiando TODOS los comandos existentes...');
         
-        if (config.discord.guildId) {
-            // Limpiar comandos del servidor específico
-            await rest.put(
-                Routes.applicationGuildCommands(config.discord.clientId, config.discord.guildId),
-                { body: [] }
-            );
-            logger.info('✅ Comandos del servidor eliminados.');
-        } else {
-            // Limpiar comandos globales
+        // Limpiar comandos globales primero
+        try {
             await rest.put(
                 Routes.applicationCommands(config.discord.clientId),
                 { body: [] }
             );
             logger.info('✅ Comandos globales eliminados.');
+        } catch (error) {
+            logger.warn('⚠️ Error limpiando comandos globales:', error.message);
         }
+        
+        // Limpiar comandos del servidor específico si existe
+        if (config.discord.guildId) {
+            try {
+                await rest.put(
+                    Routes.applicationGuildCommands(config.discord.clientId, config.discord.guildId),
+                    { body: [] }
+                );
+                logger.info('✅ Comandos del servidor eliminados.');
+            } catch (error) {
+                logger.warn('⚠️ Error limpiando comandos del servidor:', error.message);
+            }
+        }
+        
+        // Esperar un momento para que Discord procese la limpieza
+        await new Promise(resolve => setTimeout(resolve, 2000));
 
         // PASO 2: Cargar todos los comandos disponibles
         const commands = new Map();
