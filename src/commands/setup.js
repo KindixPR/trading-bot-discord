@@ -65,6 +65,11 @@ const data = new SlashCommandBuilder()
         subcommand
             .setName('memberships')
             .setDescription('💰 Configurar canal de membresías con embeds y botones')
+    )
+    .addSubcommand(subcommand =>
+        subcommand
+            .setName('verify-system')
+            .setDescription('🎭 Configurar sistema de verificación automática')
     );
 
 const permissions = ['ADMINISTRATOR'];
@@ -590,6 +595,9 @@ async function execute(interaction) {
                 break;
             case 'memberships':
                 await handleMembershipsSetup(interaction, guild);
+                break;
+            case 'verify-system':
+                await handleVerificationSystemSetup(interaction, guild);
                 break;
             default:
                 await interaction.editReply({
@@ -1282,6 +1290,217 @@ Elige tu nivel de membresía y desbloquea acceso exclusivo a contenido premium, 
         logger.error('Error configurando canal de membresías:', error);
         await interaction.editReply({
             content: '❌ Error configurando el canal de membresías.'
+        });
+    }
+}
+
+async function handleVerificationSystemSetup(interaction, guild) {
+    const progressEmbed = new EmbedBuilder()
+        .setTitle('🎭 Configurando Sistema de Verificación')
+        .setDescription('Creando sistema de verificación automática...')
+        .setColor(0x2ecc71)
+        .setTimestamp();
+
+    await interaction.editReply({ embeds: [progressEmbed] });
+
+    try {
+        // Buscar canales necesarios
+        const welcomeChannel = guild.channels.cache.find(c => c.name === 'bienvenida');
+        const verificationChannel = guild.channels.cache.find(c => c.name === 'verificación');
+        const membershipsChannel = guild.channels.cache.find(c => c.name === 'membresías');
+        
+        if (!welcomeChannel || !verificationChannel) {
+            await interaction.editReply({
+                content: '❌ No se encontraron los canales necesarios. Ejecuta primero `/setup premium`.'
+            });
+            return;
+        }
+
+        // Crear embed de bienvenida profesional
+        const welcomeEmbed = new EmbedBuilder()
+            .setTitle('🏛️ ¡Bienvenido a BDX Trades!')
+            .setDescription(`
+**🎯 Comunidad Premium de Trading**
+
+¡Hola! Bienvenido a **BDX Trades**, la comunidad de trading más exclusiva y profesional. Aquí encontrarás:
+
+**✨ ¿Qué te espera?**
+• **Señales de trading** en tiempo real
+• **Análisis profesionales** del mercado
+• **Comunidad exclusiva** de traders
+• **Educación premium** y mentoría
+• **Herramientas avanzadas** de trading
+
+**🚀 Para comenzar:**
+1. **Lee las reglas** en #📜reglas
+2. **Completa tu verificación** en #✅verificación
+3. **Elige tu membresía** en #💰membresías
+4. **¡Comienza a tradear!** 🎯
+
+**👑 Fundado por Vitaly** - Experto en trading con años de experiencia
+            `)
+            .setColor(0xffd700)
+            .setThumbnail('https://via.placeholder.com/128x128/FFD700/000000?text=BDX')
+            .setImage('https://via.placeholder.com/600x200/FFD700/000000?text=BDX+TRADES+PREMIUM')
+            .setFooter({ text: 'BDX Trades • Comunidad Premium de Trading' })
+            .setTimestamp();
+
+        // Crear botón de verificación
+        const verifyButton = new ButtonBuilder()
+            .setCustomId('verify_user')
+            .setLabel('✅ Verificarme Ahora')
+            .setStyle(ButtonStyle.Success)
+            .setEmoji('✅');
+
+        const rulesButton = new ButtonBuilder()
+            .setCustomId('view_rules')
+            .setLabel('📜 Ver Reglas')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('📜');
+
+        const membershipsButton = new ButtonBuilder()
+            .setCustomId('view_memberships')
+            .setLabel('💰 Ver Membresías')
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji('💰');
+
+        const actionRow = new ActionRowBuilder()
+            .addComponents(verifyButton, rulesButton, membershipsButton);
+
+        // Enviar embed de bienvenida
+        await welcomeChannel.send({ 
+            embeds: [welcomeEmbed], 
+            components: [actionRow] 
+        });
+
+        // Crear embed de verificación
+        const verificationEmbed = new EmbedBuilder()
+            .setTitle('✅ Verificación de Cuenta')
+            .setDescription(`
+**🎯 Completa tu verificación para acceder al contenido**
+
+**📋 Pasos para verificar:**
+1. **Haz clic en "Verificarme Ahora"** en el canal #👋bienvenida
+2. **Confirma tu identidad** siguiendo las instrucciones
+3. **Recibe tu rol** 🔍 BDX VERIFIED automáticamente
+4. **Accede al contenido** premium de la comunidad
+
+**🔒 ¿Por qué verificarse?**
+• **Acceso garantizado** al contenido
+• **Protección contra bots** y spam
+• **Experiencia personalizada** según tu tier
+• **Soporte prioritario** en la comunidad
+
+**❓ ¿Problemas con la verificación?**
+Contacta a un administrador en #🛠️soporte-técnico
+            `)
+            .setColor(0x2ecc71)
+            .setThumbnail('https://via.placeholder.com/64x64/2ECC71/FFFFFF?text=✓')
+            .setFooter({ text: 'BDX Trades • Sistema de Verificación' })
+            .setTimestamp();
+
+        // Crear botón de verificación rápida
+        const quickVerifyButton = new ButtonBuilder()
+            .setCustomId('quick_verify')
+            .setLabel('⚡ Verificación Rápida')
+            .setStyle(ButtonStyle.Success)
+            .setEmoji('⚡');
+
+        const helpButton = new ButtonBuilder()
+            .setCustomId('verify_help')
+            .setLabel('❓ Ayuda')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('❓');
+
+        const verificationActionRow = new ActionRowBuilder()
+            .addComponents(quickVerifyButton, helpButton);
+
+        // Enviar embed de verificación
+        await verificationChannel.send({ 
+            embeds: [verificationEmbed], 
+            components: [verificationActionRow] 
+        });
+
+        // Crear embed de reglas si no existe
+        const rulesChannel = guild.channels.cache.find(c => c.name === 'reglas');
+        if (rulesChannel) {
+            const rulesEmbed = new EmbedBuilder()
+                .setTitle('📜 Reglas de BDX Trades')
+                .setDescription(`
+**🏛️ Bienvenido a BDX Trades - Comunidad Premium de Trading**
+
+**📋 Reglas Generales:**
+• **Respeta a todos** los miembros de la comunidad
+• **No spam** ni contenido inapropiado
+• **Mantén la privacidad** - No compartas información personal
+• **Usa los canales correctos** para cada tipo de contenido
+• **Sigue las instrucciones** de los moderadores
+
+**💼 Reglas de Trading:**
+• **No compartas señales** de otras fuentes sin permiso
+• **Respeta la propiedad intelectual** de BDX Trades
+• **No hagas trading** con dinero que no puedas permitirte perder
+• **Mantén la confidencialidad** de las estrategias premium
+
+**🎯 Reglas de Membresías:**
+• **Tier 1 (Básico):** Acceso a comunidad general
+• **Tier 2 (VIP):** Acceso a señales y análisis premium
+• **Tier 3 (Élite):** Acceso completo y mentoría personalizada
+
+**⚠️ Sanciones:**
+• **Primera infracción:** Advertencia
+• **Segunda infracción:** Mute temporal
+• **Tercera infracción:** Expulsión temporal
+• **Infracciones graves:** Expulsión permanente
+
+**📞 Contacto:**
+Para reportar infracciones o solicitar ayuda, contacta a un administrador.
+                `)
+                .setColor(0xe74c3c)
+                .setThumbnail('https://via.placeholder.com/64x64/E74C3C/FFFFFF?text=📜')
+                .setFooter({ text: 'BDX Trades • Reglas y Términos' })
+                .setTimestamp();
+
+            await rulesChannel.send({ embeds: [rulesEmbed] });
+        }
+
+        // Embed de confirmación
+        const confirmEmbed = new EmbedBuilder()
+            .setTitle('✅ Sistema de Verificación Configurado')
+            .setDescription(`
+**🎭 Sistema de verificación automática implementado exitosamente**
+
+**📊 Configuración completada:**
+• **Canal de bienvenida:** #👋bienvenida
+• **Canal de verificación:** #✅verificación
+• **Canal de reglas:** #📜reglas
+• **Botones interactivos:** 5 botones creados
+• **Embeds profesionales:** 3 embeds configurados
+
+**🔧 Funcionalidades incluidas:**
+• **Verificación automática** con un clic
+• **Asignación de roles** automática
+• **Redirección inteligente** a membresías
+• **Sistema de ayuda** integrado
+• **Embeds profesionales** con branding BDX
+
+**🎯 Próximos pasos:**
+1. Los nuevos miembros verán el embed de bienvenida
+2. Podrán verificarse con un clic
+3. Recibirán el rol 🔍 BDX VERIFIED automáticamente
+4. Serán redirigidos a #💰membresías
+            `)
+            .setColor(0x2ecc71)
+            .setTimestamp();
+
+        await interaction.editReply({ embeds: [confirmEmbed] });
+
+        logger.info(`Sistema de verificación configurado por ${interaction.user.tag}`);
+
+    } catch (error) {
+        logger.error('Error configurando sistema de verificación:', error);
+        await interaction.editReply({
+            content: '❌ Error configurando el sistema de verificación.'
         });
     }
 }
