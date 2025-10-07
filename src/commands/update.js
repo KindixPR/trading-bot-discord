@@ -571,12 +571,8 @@ async function handleModalSubmit(interaction) {
         }
 
         // Crear embed personalizado para las notas
-        const assetInfo = getAssetInfo(updatedOperation.asset);
-        const assetName = assetInfo?.name || updatedOperation.asset;
-        const assetEmoji = assetInfo?.emoji || '📊';
-        
         const embed = {
-            title: `📢 ${assetEmoji} ${assetName} - Mensaje Importante`,
+            title: `📢 Mensaje Importante`,
             description: `**${customNotes.trim()}**`,
             color: config.colors.warning,
             timestamp: new Date(),
