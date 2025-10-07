@@ -5,6 +5,7 @@ import { database } from './database/database.js';
 import { loadCommands } from './utils/commandLoader.js';
 import { checkPermissions } from './utils/permissions.js';
 import { richPresenceConfig, getRandomMainActivity, getCommandActivity, getAssetActivity } from './config/richPresence.js';
+import { deployCommands } from './deploy-commands.js';
 import server from './server.js';
 
 class TradingBot {
@@ -89,6 +90,11 @@ class TradingBot {
             // Cargar comandos
             await loadCommands(this.commands);
             logger.info(`Cargados ${this.commands.size} comandos`);
+
+            // Registrar comandos en Discord
+            logger.info('🔄 Registrando comandos en Discord...');
+            await deployCommands();
+            logger.info('✅ Comandos registrados en Discord');
 
             // Conectar al bot
             await this.client.login(config.discord.token);
