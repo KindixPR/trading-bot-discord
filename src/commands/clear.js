@@ -91,4 +91,8 @@ async function execute(interaction) {
     }
 }
 
-export { execute, permissions };
+export default { 
+    data, 
+    execute, 
+    permissions 
+};
