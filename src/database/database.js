@@ -102,12 +102,25 @@ class Database {
             )`,
             
             // Tabla de configuración del bot
-            `CREATE TABLE IF NOT EXISTS bot_config (
-                key TEXT PRIMARY KEY,
-                value TEXT NOT NULL,
-                description TEXT,
-                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )`
+                    `CREATE TABLE IF NOT EXISTS bot_config (
+                        key TEXT PRIMARY KEY,
+                        value TEXT NOT NULL,
+                        description TEXT,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    )`,
+                    `CREATE TABLE IF NOT EXISTS server_config (
+                        guild_id TEXT PRIMARY KEY,
+                        trading_channel_id TEXT,
+                        logs_channel_id TEXT,
+                        category_id TEXT,
+                        webhook_url TEXT,
+                        setup_by TEXT NOT NULL,
+                        setup_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        last_verified DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        status TEXT DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'error')),
+                        config_data TEXT,
+                        FOREIGN KEY (setup_by) REFERENCES trading_operations (created_by)
+                    )`
         ];
 
         try {
@@ -381,6 +394,77 @@ class Database {
         } catch (error) {
             logger.error('Error registrando actualización:', error);
             throw error;
+        }
+    }
+
+    // Métodos para configuración del servidor
+    async saveServerConfig(guildId, config) {
+        const query = `
+            INSERT OR REPLACE INTO server_config 
+            (guild_id, trading_channel_id, logs_channel_id, category_id, webhook_url, setup_by, config_data, last_verified)
+            VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        `;
+        
+        const params = [
+            guildId,
+            config.tradingChannelId || null,
+            config.logsChannelId || null,
+            config.categoryId || null,
+            config.webhookUrl || null,
+            config.setupBy,
+            JSON.stringify(config)
+        ];
+        
+        try {
+            await this.run(query, params);
+            logger.info(`Configuración del servidor guardada: ${guildId}`);
+            return true;
+        } catch (error) {
+            logger.error('Error guardando configuración del servidor:', error);
+            return false;
+        }
+    }
+
+    async getServerConfig(guildId) {
+        const query = 'SELECT * FROM server_config WHERE guild_id = ?';
+        try {
+            const config = await this.get(query, [guildId]);
+            if (config && config.config_data) {
+                config.configData = JSON.parse(config.config_data);
+            }
+            return config;
+        } catch (error) {
+            logger.error('Error obteniendo configuración del servidor:', error);
+            return null;
+        }
+    }
+
+    async updateServerConfig(guildId, updates) {
+        const setClause = [];
+        const params = [];
+        
+        Object.entries(updates).forEach(([key, value]) => {
+            if (key === 'configData') {
+                setClause.push('config_data = ?');
+                params.push(JSON.stringify(value));
+            } else {
+                setClause.push(`${key} = ?`);
+                params.push(value);
+            }
+        });
+        
+        setClause.push('last_verified = CURRENT_TIMESTAMP');
+        params.push(guildId);
+        
+        const query = `UPDATE server_config SET ${setClause.join(', ')} WHERE guild_id = ?`;
+        
+        try {
+            await this.run(query, params);
+            logger.info(`Configuración del servidor actualizada: ${guildId}`);
+            return true;
+        } catch (error) {
+            logger.error('Error actualizando configuración del servidor:', error);
+            return false;
         }
     }
 
