@@ -60,6 +60,11 @@ const data = new SlashCommandBuilder()
         subcommand
             .setName('brand')
             .setDescription('🎨 Aplicar identidad visual BDX Trades')
+    )
+    .addSubcommand(subcommand =>
+        subcommand
+            .setName('memberships')
+            .setDescription('💰 Configurar canal de membresías con embeds y botones')
     );
 
 const permissions = ['ADMINISTRATOR'];
@@ -106,7 +111,7 @@ const ROLES_CONFIG = [
     }
 ];
 
-// Configuración premium BDX Trades
+// Configuración premium BDX Trades - Nueva estructura jerárquica
 const BDX_ROLES_CONFIG = [
     {
         name: '👑 BDX FOUNDER',
@@ -119,8 +124,8 @@ const BDX_ROLES_CONFIG = [
     },
     {
         name: '🥇 BDX MASTER TRADER',
-        color: 0xc0c0c0,
-        reason: 'Maestros del trading - Nivel más alto',
+        color: 0xffd700,
+        reason: 'Tier 3 - Trader Élite - Nivel más alto',
         permissions: ['ViewChannel', 'SendMessages', 'EmbedLinks', 'AttachFiles', 'ManageMessages'],
         position: 2,
         hoist: true,
@@ -128,8 +133,8 @@ const BDX_ROLES_CONFIG = [
     },
     {
         name: '💎 BDX ELITE TRADER',
-        color: 0x9b59b6,
-        reason: 'Traders de élite - Nivel premium',
+        color: 0x3498db,
+        reason: 'Tier 2 - Trader Avanzado - Nivel premium',
         permissions: ['ViewChannel', 'SendMessages', 'EmbedLinks', 'AttachFiles'],
         position: 3,
         hoist: true,
@@ -137,8 +142,8 @@ const BDX_ROLES_CONFIG = [
     },
     {
         name: '🎖️ BDX PREMIUM MEMBER',
-        color: 0xe67e22,
-        reason: 'Miembros premium - Acceso completo',
+        color: 0x95a5a6,
+        reason: 'Tier 1 - Trader Básico - Acceso comunidad',
         permissions: ['ViewChannel', 'SendMessages', 'EmbedLinks'],
         position: 4,
         hoist: true,
@@ -146,7 +151,7 @@ const BDX_ROLES_CONFIG = [
     },
     {
         name: '📈 BDX TRADER',
-        color: 0x27ae60,
+        color: 0x2ecc71,
         reason: 'Traders activos - Nivel intermedio',
         permissions: ['ViewChannel', 'SendMessages'],
         position: 5,
@@ -165,7 +170,7 @@ const BDX_ROLES_CONFIG = [
     {
         name: '🔍 BDX VERIFIED',
         color: 0x2ecc71,
-        reason: 'Miembros verificados',
+        reason: 'Miembros verificados - Acceso base',
         permissions: ['ViewChannel'],
         position: 7,
         hoist: false,
@@ -182,12 +187,12 @@ const BDX_ROLES_CONFIG = [
     }
 ];
 
-// Configuración de categorías premium
+// Configuración de categorías premium - Nueva estructura jerárquica
 const BDX_CATEGORIES_CONFIG = [
     {
-        name: '🔒 VERIFICACIÓN & ACCESO',
-        color: 0xe74c3c,
-        reason: 'Categoría para verificación y acceso inicial',
+        name: '🏠 INICIO',
+        color: 0x2ecc71,
+        reason: 'Categoría de bienvenida, verificación y soporte inicial',
         position: 1,
         permissions: {
             '@everyone': ['ViewChannel'],
@@ -196,12 +201,14 @@ const BDX_CATEGORIES_CONFIG = [
         }
     },
     {
-        name: '👑 BDX TRADES - CORE',
-        color: 0xffd700,
-        reason: 'Categoría principal de trading',
+        name: '📢 INFORMACIÓN OFICIAL',
+        color: 0xe74c3c,
+        reason: 'Categoría de información oficial de BDX',
         position: 2,
         permissions: {
-            '🎓 BDX STUDENT': ['ViewChannel'],
+            '@everyone': ['ViewChannel'],
+            '🔍 BDX VERIFIED': ['ViewChannel', 'SendMessages'],
+            '🎓 BDX STUDENT': ['ViewChannel', 'SendMessages'],
             '📈 BDX TRADER': ['ViewChannel', 'SendMessages'],
             '🎖️ BDX PREMIUM MEMBER': ['ViewChannel', 'SendMessages', 'EmbedLinks'],
             '💎 BDX ELITE TRADER': ['ViewChannel', 'SendMessages', 'EmbedLinks', 'AttachFiles'],
@@ -209,22 +216,42 @@ const BDX_CATEGORIES_CONFIG = [
         }
     },
     {
-        name: '🏆 MIEMBROS VIP',
-        color: 0x9b59b6,
-        reason: 'Categoría exclusiva para miembros VIP',
+        name: '👥 COMUNIDAD',
+        color: 0x95a5a6,
+        reason: 'Tier 1 - Trader Básico - Comunidad y análisis',
         position: 3,
         permissions: {
-            '🎖️ BDX PREMIUM MEMBER': ['ViewChannel'],
-            '💎 BDX ELITE TRADER': ['ViewChannel', 'SendMessages', 'EmbedLinks'],
+            '🎖️ BDX PREMIUM MEMBER': ['ViewChannel', 'SendMessages', 'EmbedLinks'],
+            '💎 BDX ELITE TRADER': ['ViewChannel', 'SendMessages', 'EmbedLinks', 'AttachFiles'],
+            '🥇 BDX MASTER TRADER': ['ViewChannel', 'SendMessages', 'EmbedLinks', 'AttachFiles', 'ManageMessages']
+        }
+    },
+    {
+        name: '💎 ZONA VIP',
+        color: 0x3498db,
+        reason: 'Tier 2 - Trader Avanzado - Alertas, entradas y chat VIP',
+        position: 4,
+        permissions: {
+            '💎 BDX ELITE TRADER': ['ViewChannel', 'SendMessages', 'EmbedLinks', 'AttachFiles'],
+            '🥇 BDX MASTER TRADER': ['ViewChannel', 'SendMessages', 'EmbedLinks', 'AttachFiles', 'ManageMessages']
+        }
+    },
+    {
+        name: '👑 ZONA ÉLITE',
+        color: 0xffd700,
+        reason: 'Tier 3 - Trader Élite - Clases 1-1, material exclusivo y mentoría',
+        position: 5,
+        permissions: {
             '🥇 BDX MASTER TRADER': ['ViewChannel', 'SendMessages', 'EmbedLinks', 'AttachFiles', 'ManageMessages']
         }
     },
     {
         name: '📚 EDUCACIÓN & RECURSOS',
-        color: 0x3498db,
-        reason: 'Categoría educativa y recursos',
-        position: 4,
+        color: 0x9b59b6,
+        reason: 'Categoría educativa y recursos de trading',
+        position: 6,
         permissions: {
+            '🔍 BDX VERIFIED': ['ViewChannel'],
             '🎓 BDX STUDENT': ['ViewChannel', 'SendMessages'],
             '📈 BDX TRADER': ['ViewChannel', 'SendMessages'],
             '🎖️ BDX PREMIUM MEMBER': ['ViewChannel', 'SendMessages', 'EmbedLinks'],
@@ -236,7 +263,7 @@ const BDX_CATEGORIES_CONFIG = [
         name: '🔧 SISTEMA & SOPORTE',
         color: 0x34495e,
         reason: 'Categoría de sistema y soporte técnico',
-        position: 5,
+        position: 7,
         permissions: {
             '@everyone': ['ViewChannel'],
             '🔍 BDX VERIFIED': ['ViewChannel', 'SendMessages'],
@@ -249,109 +276,177 @@ const BDX_CATEGORIES_CONFIG = [
     }
 ];
 
-// Configuración de canales premium
+// Configuración de canales premium - Nueva estructura jerárquica
 const BDX_CHANNELS_CONFIG = [
-    // Verificación & Acceso
+    // INICIO
     {
-        name: '📋 reglas-y-terminos',
+        name: '👋 bienvenida',
         type: ChannelType.GuildText,
-        category: '🔒 VERIFICACIÓN & ACCESO',
-        reason: 'Canal de reglas y términos de servicio',
+        category: '🏠 INICIO',
+        reason: 'Canal de bienvenida con embed y logo BDX',
+        topic: '🏛️ Bienvenido a BDX Trades - Comunidad Premium de Trading',
+        slowmode: 0
+    },
+    {
+        name: '✅ verificación',
+        type: ChannelType.GuildText,
+        category: '🏠 INICIO',
+        reason: 'Canal de verificación automática',
+        topic: '✅ Completa tu verificación para acceder al contenido',
+        slowmode: 0
+    },
+    {
+        name: '🆘 soporte-inicial',
+        type: ChannelType.GuildText,
+        category: '🏠 INICIO',
+        reason: 'Soporte inicial para nuevos miembros',
+        topic: '🆘 Soporte inicial - Preguntas frecuentes y ayuda',
+        slowmode: 0
+    },
+    
+    // INFORMACIÓN OFICIAL
+    {
+        name: '📋 sobre-bdx',
+        type: ChannelType.GuildText,
+        category: '📢 INFORMACIÓN OFICIAL',
+        reason: 'Información sobre BDX Trades',
+        topic: '📋 Información oficial sobre BDX Trades y nuestros servicios',
+        slowmode: 0
+    },
+    {
+        name: '📜 reglas',
+        type: ChannelType.GuildText,
+        category: '📢 INFORMACIÓN OFICIAL',
+        reason: 'Reglas y términos de servicio',
         topic: '📜 Reglas y términos de servicio de BDX Trades',
         slowmode: 0
     },
     {
-        name: '🎫 solicitar-acceso',
+        name: '📢 anuncios',
         type: ChannelType.GuildText,
-        category: '🔒 VERIFICACIÓN & ACCESO',
-        reason: 'Canal para solicitar acceso a la comunidad',
-        topic: '🎫 Solicita tu acceso a BDX Trades - Comunidad premium de trading',
-        slowmode: 60
+        category: '📢 INFORMACIÓN OFICIAL',
+        reason: 'Anuncios oficiales importantes',
+        topic: '📢 Anuncios oficiales importantes de BDX Trades',
+        slowmode: 0
     },
     {
-        name: '✅ verificacion-completada',
+        name: '💰 membresías',
         type: ChannelType.GuildText,
-        category: '🔒 VERIFICACIÓN & ACCESO',
-        reason: 'Canal de confirmación de verificación',
-        topic: '✅ Verificación completada - Bienvenido a BDX Trades',
+        category: '📢 INFORMACIÓN OFICIAL',
+        reason: 'Información sobre membresías y beneficios',
+        topic: '💰 Información sobre membresías y beneficios de cada tier',
         slowmode: 0
     },
     
-    // BDX TRADES - CORE
+    // COMUNIDAD (Tier 1 - Trader Básico)
     {
-        name: '📈 trading-signals',
+        name: '💬 chat-general',
         type: ChannelType.GuildText,
-        category: '👑 BDX TRADES - CORE',
-        reason: 'Canal principal de señales de trading',
-        topic: '📈 Señales de trading en tiempo real - BDX Trades Premium',
+        category: '👥 COMUNIDAD',
+        reason: 'Chat general de la comunidad',
+        topic: '💬 Chat general de la comunidad BDX Trades',
         slowmode: 0
     },
     {
-        name: '📊 market-analysis',
+        name: '📈 profits',
         type: ChannelType.GuildText,
-        category: '👑 BDX TRADES - CORE',
-        reason: 'Canal de análisis de mercados',
-        topic: '📊 Análisis profundo de mercados y tendencias',
+        category: '👥 COMUNIDAD',
+        reason: 'Compartir ganancias y resultados',
+        topic: '📈 Comparte tus ganancias y resultados de trading',
         slowmode: 0
     },
     {
-        name: '💎 premium-insights',
+        name: '📊 análisis-diarios',
         type: ChannelType.GuildText,
-        category: '👑 BDX TRADES - CORE',
-        reason: 'Canal de insights premium',
-        topic: '💎 Insights exclusivos para miembros premium',
+        category: '👥 COMUNIDAD',
+        reason: 'Análisis diarios del mercado',
+        topic: '📊 Análisis diarios del mercado y tendencias',
         slowmode: 0
     },
     {
-        name: '🎯 trade-execution',
+        name: '❓ preguntas-y-respuestas',
         type: ChannelType.GuildText,
-        category: '👑 BDX TRADES - CORE',
-        reason: 'Canal de ejecución de trades',
-        topic: '🎯 Ejecución de trades y seguimiento de operaciones',
+        category: '👥 COMUNIDAD',
+        reason: 'Preguntas y respuestas de la comunidad',
+        topic: '❓ Preguntas y respuestas de la comunidad',
         slowmode: 0
     },
     
-    // MIEMBROS VIP
+    // ZONA VIP (Tier 2 - Trader Avanzado)
     {
-        name: '💼 vip-lounge',
+        name: '🎯 entradas-de-vitaly',
         type: ChannelType.GuildText,
-        category: '🏆 MIEMBROS VIP',
-        reason: 'Lounge exclusivo para miembros VIP',
-        topic: '💼 Lounge VIP - Espacio exclusivo para miembros premium',
+        category: '💎 ZONA VIP',
+        reason: 'Entradas y señales de Vitaly',
+        topic: '🎯 Entradas y señales exclusivas de Vitaly',
         slowmode: 0
     },
     {
-        name: '🥇 elite-traders',
+        name: '🤖 alertas-de-bots',
         type: ChannelType.GuildText,
-        category: '🏆 MIEMBROS VIP',
-        reason: 'Canal para traders de élite',
-        topic: '🥇 Canal exclusivo para traders de élite',
+        category: '💎 ZONA VIP',
+        reason: 'Alertas automáticas de bots',
+        topic: '🤖 Alertas automáticas de bots de trading',
         slowmode: 0
     },
     {
-        name: '🎖️ master-traders',
+        name: '💎 chat-privado-vip',
         type: ChannelType.GuildText,
-        category: '🏆 MIEMBROS VIP',
-        reason: 'Canal para maestros del trading',
-        topic: '🎖️ Canal exclusivo para maestros del trading',
+        category: '💎 ZONA VIP',
+        reason: 'Chat privado para miembros VIP',
+        topic: '💎 Chat privado exclusivo para miembros VIP',
         slowmode: 0
     },
     {
-        name: '👑 bdx-ambassadors',
+        name: '📚 estrategias-avanzadas',
         type: ChannelType.GuildText,
-        category: '🏆 MIEMBROS VIP',
-        reason: 'Canal para embajadores de BDX',
-        topic: '👑 Canal exclusivo para embajadores de BDX Trades',
+        category: '💎 ZONA VIP',
+        reason: 'Estrategias avanzadas de trading',
+        topic: '📚 Estrategias avanzadas de trading para VIP',
+        slowmode: 0
+    },
+    
+    // ZONA ÉLITE (Tier 3 - Trader Élite)
+    {
+        name: '🎓 clases-1-a-1',
+        type: ChannelType.GuildText,
+        category: '👑 ZONA ÉLITE',
+        reason: 'Clases personalizadas 1 a 1',
+        topic: '🎓 Clases personalizadas 1 a 1 con Vitaly',
+        slowmode: 0
+    },
+    {
+        name: '📖 material-de-estudio',
+        type: ChannelType.GuildText,
+        category: '👑 ZONA ÉLITE',
+        reason: 'Material de estudio exclusivo',
+        topic: '📖 Material de estudio exclusivo para élite',
+        slowmode: 0
+    },
+    {
+        name: '🔒 consultas-privadas',
+        type: ChannelType.GuildText,
+        category: '👑 ZONA ÉLITE',
+        reason: 'Consultas privadas con Vitaly',
+        topic: '🔒 Consultas privadas exclusivas con Vitaly',
+        slowmode: 0
+    },
+    {
+        name: '🎬 replays-de-clases',
+        type: ChannelType.GuildText,
+        category: '👑 ZONA ÉLITE',
+        reason: 'Replays de clases grabadas',
+        topic: '🎬 Replays de clases grabadas para élite',
         slowmode: 0
     },
     
     // EDUCACIÓN & RECURSOS
     {
-        name: '📖 trading-academy',
+        name: '📚 trading-academy',
         type: ChannelType.GuildText,
         category: '📚 EDUCACIÓN & RECURSOS',
         reason: 'Academia de trading',
-        topic: '📖 Academia de trading - Aprende con los mejores',
+        topic: '📚 Academia de trading - Aprende con los mejores',
         slowmode: 0
     },
     {
@@ -363,19 +458,19 @@ const BDX_CHANNELS_CONFIG = [
         slowmode: 0
     },
     {
-        name: '🎓 cursos-premium',
+        name: '🧠 psicología-del-trader',
         type: ChannelType.GuildText,
         category: '📚 EDUCACIÓN & RECURSOS',
-        reason: 'Cursos premium',
-        topic: '🎓 Cursos premium de trading',
+        reason: 'Psicología del trader',
+        topic: '🧠 Psicología del trader y mentalidad',
         slowmode: 0
     },
     {
-        name: '📚 biblioteca-trading',
+        name: '🛠️ herramientas-y-plantillas',
         type: ChannelType.GuildText,
         category: '📚 EDUCACIÓN & RECURSOS',
-        reason: 'Biblioteca de recursos',
-        topic: '📚 Biblioteca de recursos de trading',
+        reason: 'Herramientas y plantillas de trading',
+        topic: '🛠️ Herramientas y plantillas de trading',
         slowmode: 0
     },
     
@@ -389,7 +484,7 @@ const BDX_CHANNELS_CONFIG = [
         slowmode: 0
     },
     {
-        name: '📊 estadisticas',
+        name: '📊 estadísticas',
         type: ChannelType.GuildText,
         category: '🔧 SISTEMA & SOPORTE',
         reason: 'Estadísticas del servidor',
@@ -397,7 +492,7 @@ const BDX_CHANNELS_CONFIG = [
         slowmode: 0
     },
     {
-        name: '🛠️ soporte-tecnico',
+        name: '🛠️ soporte-técnico',
         type: ChannelType.GuildText,
         category: '🔧 SISTEMA & SOPORTE',
         reason: 'Soporte técnico',
@@ -492,6 +587,9 @@ async function execute(interaction) {
                 break;
             case 'brand':
                 await handleBrandSetup(interaction, guild);
+                break;
+            case 'memberships':
+                await handleMembershipsSetup(interaction, guild);
                 break;
             default:
                 await interaction.editReply({
@@ -1018,6 +1116,174 @@ async function handleBrandSetup(interaction, guild) {
     });
 
     logger.info(`Identidad visual BDX Trades aplicada por ${interaction.user.tag}`);
+}
+
+async function handleMembershipsSetup(interaction, guild) {
+    const progressEmbed = new EmbedBuilder()
+        .setTitle('💰 Configurando Canal de Membresías')
+        .setDescription('Creando embeds y botones de membresías...')
+        .setColor(0xffd700)
+        .setTimestamp();
+
+    await interaction.editReply({ embeds: [progressEmbed] });
+
+    // Buscar el canal de membresías
+    const membershipsChannel = guild.channels.cache.find(c => c.name === 'membresías');
+    if (!membershipsChannel) {
+        await interaction.editReply({
+            content: '❌ No se encontró el canal #💰membresías. Ejecuta primero `/setup premium`.'
+        });
+        return;
+    }
+
+    try {
+        // Crear embed principal de membresías
+        const mainEmbed = new EmbedBuilder()
+            .setTitle('💰 Membresías BDX Trades')
+            .setDescription(`
+**🏛️ BDX Trades - Comunidad Premium de Trading**
+
+Elige tu nivel de membresía y desbloquea acceso exclusivo a contenido premium, señales de trading, análisis profesionales y mucho más.
+
+**🎯 ¿Por qué unirte a BDX Trades?**
+• **Señales de trading** en tiempo real
+• **Análisis profesionales** del mercado
+• **Comunidad exclusiva** de traders
+• **Educación premium** y mentoría
+• **Herramientas avanzadas** de trading
+            `)
+            .setColor(0xffd700)
+            .setThumbnail('https://via.placeholder.com/128x128/FFD700/000000?text=BDX')
+            .setFooter({ text: 'BDX Trades • Membresías Premium' })
+            .setTimestamp();
+
+        // Crear embeds para cada tier
+        const tier1Embed = new EmbedBuilder()
+            .setTitle('🎖️ Tier 1 - Trader Básico')
+            .setDescription(`
+**💰 Precio:** Consultar disponibilidad
+**🎯 Beneficios incluidos:**
+• ✅ Acceso a comunidad general
+• ✅ Análisis diarios del mercado
+• ✅ Chat general con otros traders
+• ✅ Compartir ganancias y resultados
+• ✅ Preguntas y respuestas
+• ✅ Recursos educativos básicos
+
+**📈 Perfecto para:**
+• Traders principiantes
+• Quienes buscan aprender
+• Interacción con la comunidad
+            `)
+            .setColor(0x95a5a6)
+            .setThumbnail('https://via.placeholder.com/64x64/95A5A6/FFFFFF?text=T1');
+
+        const tier2Embed = new EmbedBuilder()
+            .setTitle('💎 Tier 2 - Trader Avanzado')
+            .setDescription(`
+**💰 Precio:** Consultar disponibilidad
+**🎯 Beneficios incluidos:**
+• ✅ Todo lo del Tier 1
+• ✅ Entradas y señales de Vitaly
+• ✅ Alertas automáticas de bots
+• ✅ Chat privado VIP
+• ✅ Estrategias avanzadas
+• ✅ Análisis en tiempo real
+
+**📈 Perfecto para:**
+• Traders con experiencia
+• Quienes buscan señales premium
+• Acceso a contenido exclusivo
+            `)
+            .setColor(0x3498db)
+            .setThumbnail('https://via.placeholder.com/64x64/3498DB/FFFFFF?text=T2');
+
+        const tier3Embed = new EmbedBuilder()
+            .setTitle('👑 Tier 3 - Trader Élite')
+            .setDescription(`
+**💰 Precio:** Consultar disponibilidad
+**🎯 Beneficios incluidos:**
+• ✅ Todo lo del Tier 2
+• ✅ Clases personalizadas 1 a 1
+• ✅ Material de estudio exclusivo
+• ✅ Consultas privadas con Vitaly
+• ✅ Replays de clases grabadas
+• ✅ Mentoría directa
+
+**📈 Perfecto para:**
+• Traders profesionales
+• Quienes buscan mentoría
+• Acceso total y exclusivo
+            `)
+            .setColor(0xffd700)
+            .setThumbnail('https://via.placeholder.com/64x64/FFD700/000000?text=T3');
+
+        // Crear botones para cada tier
+        const tier1Button = new ButtonBuilder()
+            .setCustomId('membership_tier1')
+            .setLabel('🎖️ Tier 1 - Básico')
+            .setStyle(ButtonStyle.Secondary);
+
+        const tier2Button = new ButtonBuilder()
+            .setCustomId('membership_tier2')
+            .setLabel('💎 Tier 2 - Avanzado')
+            .setStyle(ButtonStyle.Primary);
+
+        const tier3Button = new ButtonBuilder()
+            .setCustomId('membership_tier3')
+            .setLabel('👑 Tier 3 - Élite')
+            .setStyle(ButtonStyle.Success);
+
+        const infoButton = new ButtonBuilder()
+            .setCustomId('membership_info')
+            .setLabel('ℹ️ Más Información')
+            .setStyle(ButtonStyle.Secondary);
+
+        const contactButton = new ButtonBuilder()
+            .setCustomId('membership_contact')
+            .setLabel('📞 Contactar')
+            .setStyle(ButtonStyle.Secondary);
+
+        const actionRow1 = new ActionRowBuilder()
+            .addComponents(tier1Button, tier2Button, tier3Button);
+
+        const actionRow2 = new ActionRowBuilder()
+            .addComponents(infoButton, contactButton);
+
+        // Enviar mensajes al canal de membresías
+        await membershipsChannel.send({ embeds: [mainEmbed], components: [actionRow1, actionRow2] });
+        await membershipsChannel.send({ embeds: [tier1Embed] });
+        await membershipsChannel.send({ embeds: [tier2Embed] });
+        await membershipsChannel.send({ embeds: [tier3Embed] });
+
+        // Embed de confirmación
+        const confirmEmbed = new EmbedBuilder()
+            .setTitle('✅ Canal de Membresías Configurado')
+            .setDescription(`
+**💰 Canal:** #membresías
+**📊 Embeds:** 4 embeds creados
+**🔘 Botones:** 5 botones interactivos
+**🎨 Diseño:** Profesional y atractivo
+
+**📋 Incluye:**
+• Embed principal con información general
+• Embed detallado para cada tier
+• Botones para seleccionar membresía
+• Botones de información y contacto
+            `)
+            .setColor(0x2ecc71)
+            .setTimestamp();
+
+        await interaction.editReply({ embeds: [confirmEmbed] });
+
+        logger.info(`Canal de membresías configurado por ${interaction.user.tag}`);
+
+    } catch (error) {
+        logger.error('Error configurando canal de membresías:', error);
+        await interaction.editReply({
+            content: '❌ Error configurando el canal de membresías.'
+        });
+    }
 }
 
 // Funciones auxiliares
