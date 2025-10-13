@@ -5,6 +5,7 @@ import { database } from './database/database.js';
 import { loadCommands } from './utils/commandLoader.js';
 import { checkPermissions } from './utils/permissions.js';
 import { richPresenceConfig, getRandomMainActivity, getCommandActivity, getAssetActivity } from './config/richPresence.js';
+import { deployCommands } from './deploy-commands.js';
 import server from './server.js';
 
 class TradingBot {
@@ -82,16 +83,81 @@ class TradingBot {
             // Inicializar base de datos
             await database.initialize();
             logger.info('Base de datos inicializada correctamente');
+            
+            // Verificar que las tablas existen y crear operación de prueba si es necesario
+            await this.verifyDatabaseSetup();
 
             // Cargar comandos
             await loadCommands(this.commands);
             logger.info(`Cargados ${this.commands.size} comandos`);
+
+            // Registrar comandos en Discord
+            logger.info('🔄 Registrando comandos en Discord...');
+            await deployCommands();
+            logger.info('✅ Comandos registrados en Discord');
+            
+            // Forzar limpieza adicional después de 5 segundos
+            setTimeout(async () => {
+                try {
+                    logger.info('🧹 Ejecutando limpieza adicional de comandos...');
+                    await deployCommands();
+                    logger.info('✅ Limpieza adicional completada');
+                } catch (error) {
+                    logger.error('Error en limpieza adicional:', error);
+                }
+            }, 5000);
 
             // Conectar al bot
             await this.client.login(config.discord.token);
         } catch (error) {
             logger.error('Error al iniciar el bot:', error);
             process.exit(1);
+        }
+    }
+
+    async verifyDatabaseSetup() {
+        try {
+            logger.info('🔍 Verificando configuración de base de datos...');
+            
+            // Verificar que las tablas existen
+            const tableCheck = await database.get("SELECT name FROM sqlite_master WHERE type='table' AND name='trading_operations'");
+            if (!tableCheck) {
+                logger.error('CRÍTICO: Tabla trading_operations no existe');
+                throw new Error('Tabla trading_operations no existe');
+            }
+            logger.info('✅ Tabla trading_operations verificada');
+            
+            // Verificar si hay operaciones
+            const operations = await database.getActiveOperations();
+            logger.info(`📊 Operaciones activas encontradas: ${operations ? operations.length : 0}`);
+            
+            // Si no hay operaciones, crear una de prueba
+            if (!operations || operations.length === 0) {
+                logger.info('🧪 No hay operaciones, creando operación de prueba...');
+                const testOperation = {
+                    operationId: 'TEST-' + Date.now(),
+                    asset: 'US30',
+                    orderType: 'BUY',
+                    entryPrice: 35000.0,
+                    takeProfit1: 35100.0,
+                    stopLoss: 34900.0,
+                    status: 'OPEN',
+                    notes: 'Operación de prueba - Sistema funcionando correctamente',
+                    createdBy: 'system'
+                };
+                
+                const createdOp = await database.createOperation(testOperation);
+                if (createdOp) {
+                    logger.info('✅ Operación de prueba creada exitosamente');
+                } else {
+                    logger.warn('⚠️ No se pudo crear operación de prueba');
+                }
+            }
+            
+            logger.info('✅ Verificación de base de datos completada');
+        } catch (error) {
+            logger.error('Error verificando configuración de base de datos:', error);
+            // No lanzar error para no detener el bot
         }
     }
 

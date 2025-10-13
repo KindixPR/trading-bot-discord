@@ -4,6 +4,8 @@
  */
 
 import http from 'http';
+import { deployCommands } from './deploy-commands.js';
+import { logger } from './utils/logger.js';
 
 const PORT = process.env.PORT || 3000;
 
@@ -28,6 +30,33 @@ const server = http.createServer((req, res) => {
             timestamp: new Date().toISOString(),
             uptime: process.uptime()
         }));
+        return;
+    }
+    
+    // Endpoint para limpiar comandos
+    if (req.url === '/cleanup-commands') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        
+        // Ejecutar limpieza de comandos
+        deployCommands()
+            .then(() => {
+                logger.info('🧹 Limpieza de comandos ejecutada via HTTP');
+                res.end(JSON.stringify({
+                    success: true,
+                    message: 'Comandos limpiados exitosamente',
+                    timestamp: new Date().toISOString(),
+                    commands: ['entry', 'update', 'trades', 'about', 'clear']
+                }));
+            })
+            .catch((error) => {
+                logger.error('❌ Error en limpieza via HTTP:', error);
+                res.end(JSON.stringify({
+                    success: false,
+                    message: 'Error limpiando comandos',
+                    error: error.message,
+                    timestamp: new Date().toISOString()
+                }));
+            });
         return;
     }
     

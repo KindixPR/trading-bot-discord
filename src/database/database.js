@@ -25,16 +25,48 @@ class Database {
 
     async initialize() {
         return new Promise((resolve, reject) => {
+            logger.info(`Intentando conectar a la base de datos: ${this.dbPath}`);
             this.db = new sqlite3.Database(this.dbPath, (err) => {
                 if (err) {
                     logger.error('Error conectando a la base de datos:', err);
                     reject(err);
                 } else {
-                    logger.info(`Conectado a la base de datos: ${this.dbPath}`);
-                    this.createTables().then(resolve).catch(reject);
+                    logger.info(`Conectado exitosamente a la base de datos: ${this.dbPath}`);
+                    this.createTables().then(() => {
+                        logger.info('Tablas creadas/verificadas, base de datos lista');
+                        
+                        // Verificar que las tablas se crearon correctamente
+                        this.verifyTables().then(() => {
+                            resolve();
+                        }).catch(reject);
+                    }).catch(reject);
                 }
             });
         });
+    }
+
+    async verifyTables() {
+        try {
+            // Verificar que la tabla trading_operations existe
+            const tableCheck = await this.get("SELECT name FROM sqlite_master WHERE type='table' AND name='trading_operations'");
+            if (!tableCheck) {
+                logger.error('CRÍTICO: Tabla trading_operations no existe después de la inicialización');
+                throw new Error('Tabla trading_operations no existe');
+            }
+            logger.info('✅ Tabla trading_operations verificada correctamente');
+            
+            // Verificar que la tabla operation_updates existe
+            const updatesTableCheck = await this.get("SELECT name FROM sqlite_master WHERE type='table' AND name='operation_updates'");
+            if (!updatesTableCheck) {
+                logger.error('CRÍTICO: Tabla operation_updates no existe después de la inicialización');
+                throw new Error('Tabla operation_updates no existe');
+            }
+            logger.info('✅ Tabla operation_updates verificada correctamente');
+            
+        } catch (error) {
+            logger.error('Error verificando tablas:', error);
+            throw error;
+        }
     }
 
     async createTables() {
@@ -70,19 +102,38 @@ class Database {
             )`,
             
             // Tabla de configuración del bot
-            `CREATE TABLE IF NOT EXISTS bot_config (
-                key TEXT PRIMARY KEY,
-                value TEXT NOT NULL,
-                description TEXT,
-                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )`
+                    `CREATE TABLE IF NOT EXISTS bot_config (
+                        key TEXT PRIMARY KEY,
+                        value TEXT NOT NULL,
+                        description TEXT,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    )`,
+                    `CREATE TABLE IF NOT EXISTS server_config (
+                        guild_id TEXT PRIMARY KEY,
+                        trading_channel_id TEXT,
+                        logs_channel_id TEXT,
+                        category_id TEXT,
+                        webhook_url TEXT,
+                        setup_by TEXT NOT NULL,
+                        setup_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        last_verified DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        status TEXT DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'error')),
+                        config_data TEXT,
+                        FOREIGN KEY (setup_by) REFERENCES trading_operations (created_by)
+                    )`
         ];
 
-        for (const query of queries) {
-            await this.run(query);
+        try {
+            for (const query of queries) {
+                logger.info(`Ejecutando query: ${query.substring(0, 50)}...`);
+                await this.run(query);
+                logger.info('Query ejecutado correctamente');
+            }
+            logger.info('Tablas de la base de datos creadas/verificadas correctamente');
+        } catch (error) {
+            logger.error('Error creando tablas:', error);
+            throw error;
         }
-
-        logger.info('Tablas de la base de datos creadas/verificadas correctamente');
     }
 
     async run(query, params = []) {
@@ -139,7 +190,10 @@ class Database {
         try {
             const result = await this.run(query, params);
             logger.info(`Operación creada: ${operationId}`);
-            return result;
+            
+            // Obtener y devolver la operación creada
+            const createdOperation = await this.getOperation(operationId);
+            return createdOperation;
         } catch (error) {
             logger.error('Error creando operación:', error);
             throw error;
@@ -161,7 +215,7 @@ class Database {
             params.push(status);
         }
         if (takeProfit !== undefined) {
-            setClause.push('take_profit = ?');
+            setClause.push('take_profit_1 = ?');
             params.push(takeProfit);
         }
         if (stopLoss !== undefined) {
@@ -189,8 +243,26 @@ class Database {
     }
 
     async getActiveOperations() {
-        const query = 'SELECT * FROM trading_operations WHERE status IN ("OPEN", "BE", "TP1", "TP2", "TP3") ORDER BY created_at DESC';
-        return await this.all(query);
+        try {
+            // Primero intentar con query simple
+            const simpleQuery = "SELECT * FROM trading_operations WHERE status = 'OPEN' ORDER BY created_at DESC";
+            const simpleOps = await this.all(simpleQuery);
+            logger.info(`getActiveOperations (OPEN only): ${simpleOps ? simpleOps.length : 0} operaciones`);
+            
+            // Luego con query completa
+            const query = "SELECT * FROM trading_operations WHERE status IN ('OPEN', 'BE', 'TP1', 'TP2', 'TP3') ORDER BY created_at DESC";
+            const operations = await this.all(query);
+            logger.info(`getActiveOperations (all active): ${operations ? operations.length : 0} operaciones activas`);
+            
+            if (operations && operations.length > 0) {
+                logger.info(`Primera operación: ${JSON.stringify(operations[0])}`);
+            }
+            
+            return operations;
+        } catch (error) {
+            logger.error('Error en getActiveOperations:', error);
+            return [];
+        }
     }
 
     async getOperationsByAsset(asset) {
@@ -199,18 +271,112 @@ class Database {
     }
 
     async getClosedOperations() {
-        const query = 'SELECT * FROM trading_operations WHERE status = "CLOSED" ORDER BY created_at DESC';
+        const query = "SELECT * FROM trading_operations WHERE status = 'CLOSED' ORDER BY created_at DESC";
         return await this.all(query);
     }
 
     async getAllOperations() {
         const query = 'SELECT * FROM trading_operations ORDER BY created_at DESC';
-        return await this.all(query);
+        const operations = await this.all(query);
+        logger.info(`getAllOperations: Encontradas ${operations ? operations.length : 0} operaciones totales`);
+        if (operations && operations.length > 0) {
+            logger.info(`Primera operación: ${JSON.stringify(operations[0])}`);
+        }
+        return operations;
+    }
+
+    // Función de debugging para verificar el estado de la base de datos
+    async debugDatabase() {
+        try {
+            logger.info('=== DEBUG DATABASE START ===');
+            
+            // Verificar conexión
+            if (!this.db) {
+                logger.error('Base de datos no está conectada');
+                return;
+            }
+            
+            // Verificar si la tabla existe
+            const tableCheck = await this.get("SELECT name FROM sqlite_master WHERE type='table' AND name='trading_operations'");
+            logger.info(`Tabla trading_operations existe: ${!!tableCheck}`);
+            
+            // Contar registros totales
+            const countResult = await this.get("SELECT COUNT(*) as count FROM trading_operations");
+            logger.info(`Total registros en trading_operations: ${countResult ? countResult.count : 0}`);
+            
+            // Obtener todas las operaciones
+            const allOps = await this.getAllOperations();
+            logger.info(`getAllOperations() devolvió: ${allOps ? allOps.length : 'null/undefined'} operaciones`);
+            
+            // Obtener operaciones activas
+            const activeOps = await this.getActiveOperations();
+            logger.info(`getActiveOperations() devolvió: ${activeOps ? activeOps.length : 'null/undefined'} operaciones`);
+            
+            // Obtener operaciones cerradas
+            const closedOps = await this.getClosedOperations();
+            logger.info(`getClosedOperations() devolvió: ${closedOps ? closedOps.length : 'null/undefined'} operaciones`);
+            
+            // Mostrar estructura de la primera operación si existe
+            if (allOps && allOps.length > 0) {
+                logger.info('Primera operación encontrada:');
+                logger.info(JSON.stringify(allOps[0], null, 2));
+                
+                // Contar por estado
+                const statusCounts = {};
+                allOps.forEach(op => {
+                    statusCounts[op.status] = (statusCounts[op.status] || 0) + 1;
+                });
+                logger.info('Conteo por estado:');
+                logger.info(JSON.stringify(statusCounts, null, 2));
+            } else {
+                logger.warn('No se encontraron operaciones en la base de datos');
+                
+                // Verificar si hay datos en la tabla directamente
+                const directQuery = await this.all("SELECT * FROM trading_operations LIMIT 5");
+                logger.info(`Query directo devolvió: ${directQuery ? directQuery.length : 'null/undefined'} registros`);
+                if (directQuery && directQuery.length > 0) {
+                    logger.info('Primer registro de query directo:');
+                    logger.info(JSON.stringify(directQuery[0], null, 2));
+                }
+            }
+            
+            logger.info('=== DEBUG DATABASE END ===');
+        } catch (error) {
+            logger.error('Error en debugDatabase:', error);
+        }
     }
 
     async getOperationUpdates(operationId) {
         const query = 'SELECT * FROM operation_updates WHERE operation_id = ? ORDER BY updated_at DESC';
         return await this.all(query, [operationId]);
+    }
+
+    // Función específica para debugging de operaciones OPEN
+    async debugOpenOperations() {
+        try {
+            logger.info('=== DEBUG OPEN OPERATIONS ===');
+            
+            // Query directo para operaciones OPEN
+            const openQuery = "SELECT * FROM trading_operations WHERE status = 'OPEN' ORDER BY created_at DESC";
+            const openOps = await this.all(openQuery);
+            logger.info(`Query directo OPEN: ${openOps ? openOps.length : 'null/undefined'} operaciones`);
+            
+            // Query para todas las operaciones con estado
+            const allStatusQuery = "SELECT operation_id, status, asset, order_type, created_at FROM trading_operations ORDER BY created_at DESC";
+            const allStatusOps = await this.all(allStatusQuery);
+            logger.info(`Todas las operaciones con estado: ${allStatusOps ? allStatusOps.length : 'null/undefined'}`);
+            
+            if (allStatusOps && allStatusOps.length > 0) {
+                logger.info('Todas las operaciones encontradas:');
+                allStatusOps.forEach((op, index) => {
+                    logger.info(`${index + 1}. ID: ${op.operation_id}, Status: ${op.status}, Asset: ${op.asset}, Type: ${op.order_type}, Created: ${op.created_at}`);
+                });
+            }
+            
+            logger.info('=== END DEBUG OPEN OPERATIONS ===');
+        } catch (error) {
+            logger.error('Error en debugOpenOperations:', error);
+        }
     }
 
     async logOperationUpdate(operationId, updateType, oldValue, newValue, notes, updatedBy) {
@@ -228,6 +394,77 @@ class Database {
         } catch (error) {
             logger.error('Error registrando actualización:', error);
             throw error;
+        }
+    }
+
+    // Métodos para configuración del servidor
+    async saveServerConfig(guildId, config) {
+        const query = `
+            INSERT OR REPLACE INTO server_config 
+            (guild_id, trading_channel_id, logs_channel_id, category_id, webhook_url, setup_by, config_data, last_verified)
+            VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        `;
+        
+        const params = [
+            guildId,
+            config.tradingChannelId || null,
+            config.logsChannelId || null,
+            config.categoryId || null,
+            config.webhookUrl || null,
+            config.setupBy,
+            JSON.stringify(config)
+        ];
+        
+        try {
+            await this.run(query, params);
+            logger.info(`Configuración del servidor guardada: ${guildId}`);
+            return true;
+        } catch (error) {
+            logger.error('Error guardando configuración del servidor:', error);
+            return false;
+        }
+    }
+
+    async getServerConfig(guildId) {
+        const query = 'SELECT * FROM server_config WHERE guild_id = ?';
+        try {
+            const config = await this.get(query, [guildId]);
+            if (config && config.config_data) {
+                config.configData = JSON.parse(config.config_data);
+            }
+            return config;
+        } catch (error) {
+            logger.error('Error obteniendo configuración del servidor:', error);
+            return null;
+        }
+    }
+
+    async updateServerConfig(guildId, updates) {
+        const setClause = [];
+        const params = [];
+        
+        Object.entries(updates).forEach(([key, value]) => {
+            if (key === 'configData') {
+                setClause.push('config_data = ?');
+                params.push(JSON.stringify(value));
+            } else {
+                setClause.push(`${key} = ?`);
+                params.push(value);
+            }
+        });
+        
+        setClause.push('last_verified = CURRENT_TIMESTAMP');
+        params.push(guildId);
+        
+        const query = `UPDATE server_config SET ${setClause.join(', ')} WHERE guild_id = ?`;
+        
+        try {
+            await this.run(query, params);
+            logger.info(`Configuración del servidor actualizada: ${guildId}`);
+            return true;
+        } catch (error) {
+            logger.error('Error actualizando configuración del servidor:', error);
+            return false;
         }
     }
 

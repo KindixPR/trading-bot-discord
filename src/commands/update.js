@@ -25,6 +25,32 @@ const updateInteractionState = new Map();
 // Sistema de locks por usuario para prevenir conflictos
 const updateUserLocks = new Map();
 
+// Mapa para almacenar timeouts de limpieza por usuario
+const updateUserTimeouts = new Map();
+
+// Función para limpiar el estado de un usuario
+function cleanupUpdateUserState(userId) {
+    updateUserLocks.delete(userId);
+    updateInteractionState.delete(userId);
+    updateUserTimeouts.delete(userId);
+    logger.info(`Estado de actualización limpiado para usuario ${userId}`);
+}
+
+// Función para resetear el timeout de un usuario
+function resetUpdateUserTimeout(userId) {
+    // Limpiar timeout anterior si existe
+    if (updateUserTimeouts.has(userId)) {
+        clearTimeout(updateUserTimeouts.get(userId));
+    }
+    
+    // Establecer nuevo timeout de 5 minutos (300000ms)
+    const timeoutId = setTimeout(() => {
+        cleanupUpdateUserState(userId);
+    }, 300000); // 5 minutos en lugar de 30 segundos
+    
+    updateUserTimeouts.set(userId, timeoutId);
+}
+
 // Función para generar mensajes específicos por estado
 function getStatusMessage(status, operation) {
     const assetInfo = getAssetInfo(operation.asset);
@@ -79,30 +105,80 @@ function getStatusMessage(status, operation) {
 async function execute(interaction) {
     const userId = interaction.user.id;
     
-    // Verificar si el usuario ya tiene un lock activo
-    if (updateUserLocks.has(userId)) {
-        logger.warn(`Usuario ${interaction.user.tag} intentó ejecutar /update mientras ya está en proceso`);
-        try {
-            await interaction.reply({ content: '⏳ Ya tienes una actualización en proceso. Espera a que termine.', flags: 64 });
-        } catch (error) {
-            logger.error('Error respondiendo a usuario bloqueado:', error);
-        }
+    // Verificar si la interacción ya fue respondida
+    if (interaction.replied || interaction.deferred) {
+        logger.warn(`Interacción ya fue respondida para usuario ${interaction.user.tag}`);
         return;
+    }
+    
+    // Deferir respuesta INMEDIATAMENTE - SIN NINGUNA VERIFICACIÓN PREVIA
+    try {
+        await interaction.deferReply({ flags: 64 });
+    } catch (error) {
+        if (error.code === 10062) {
+            logger.warn(`Interacción expirada para usuario ${interaction.user.tag} antes de poder responder`);
+            return;
+        }
+        if (error.code === 40060) {
+            logger.warn(`Interacción ya fue reconocida para usuario ${interaction.user.tag}`);
+            return;
+        }
+        throw error;
+    }
+    
+    // AHORA verificar si el usuario ya tiene un lock activo
+    if (updateUserLocks.has(userId)) {
+        const lockTime = updateUserLocks.get(userId);
+        const timeSinceLock = Date.now() - lockTime;
+        const minutesSinceLock = Math.floor(timeSinceLock / 60000);
+        
+        logger.warn(`Usuario ${interaction.user.tag} intentó ejecutar /update mientras ya está en proceso (hace ${minutesSinceLock} minutos)`);
+        
+        try {
+            if (timeSinceLock > 300000) { // 5 minutos
+                // Si el lock tiene más de 5 minutos, limpiarlo automáticamente
+                logger.warn(`Limpiando lock antiguo para usuario ${interaction.user.tag} (${minutesSinceLock} minutos)`);
+                updateUserLocks.delete(userId);
+                updateUserTimeouts.delete(userId);
+                await interaction.editReply({ 
+                    content: '🔄 Sesión anterior expirada. Iniciando nueva actualización...' 
+                });
+            } else {
+                await interaction.editReply({ 
+                    content: `⏳ Ya tienes una actualización en proceso desde hace ${minutesSinceLock} minuto(s). Espera a que termine o usa \`/clear\` si está atascado.` 
+                });
+                return;
+            }
+        } catch (error) {
+            logger.error('Error editando respuesta de usuario bloqueado:', error);
+            return;
+        }
     }
     
     // Crear lock para el usuario
     updateUserLocks.set(userId, Date.now());
     
     try {
-        // Deferir respuesta para evitar timeout
-        await interaction.deferReply({ flags: 64 });
         
         logger.info(`Comando /update ejecutado por ${interaction.user.tag}`);
         
+        // Debug: Verificar estado de la base de datos
+        logger.info('=== INICIANDO DEBUG UPDATE ===');
+        try {
+            await database.debugDatabase();
+            await database.debugOpenOperations();
+        } catch (debugError) {
+            logger.error('Error en debugging:', debugError);
+        }
+        logger.info('=== FIN DEBUG UPDATE ===');
+        
         // Obtener operaciones abiertas
+        logger.info('Obteniendo operaciones activas...');
         const openOperations = await database.getActiveOperations();
+        logger.info(`Resultado de getActiveOperations: ${openOperations ? openOperations.length : 'null/undefined'}`);
         
         if (!openOperations || openOperations.length === 0) {
+            logger.warn(`No se encontraron operaciones activas para usuario ${interaction.user.tag}`);
             const embed = createErrorEmbed('Sin Operaciones', 'No hay operaciones abiertas para actualizar.');
             await interaction.editReply({ embeds: [embed] });
             return;
@@ -174,16 +250,74 @@ async function execute(interaction) {
             // NO intentar responder aquí para evitar doble respuesta
         }
     } finally {
-        // Limpiar el lock del usuario después de 30 segundos
-        setTimeout(() => {
-            updateUserLocks.delete(userId);
-            updateInteractionState.delete(userId);
-        }, 30000);
+        // Establecer timeout de limpieza de 5 minutos
+        resetUpdateUserTimeout(userId);
     }
 }
 
 // Manejar interacciones de botones para update
 async function handleButtonInteraction(interaction) {
+    // Verificar si la interacción ya fue respondida
+    if (interaction.replied || interaction.deferred) {
+        logger.warn(`Interacción de botón ya fue respondida para usuario ${interaction.user.tag}`);
+        return;
+    }
+    
+    // Verificar si la interacción es muy antigua (más de 10 minutos)
+    const interactionAge = Date.now() - interaction.createdTimestamp;
+    if (interactionAge > 600000) { // 10 minutos
+        logger.warn(`Interacción muy antigua para usuario ${interaction.user.tag} (${Math.round(interactionAge / 1000)}s)`);
+        try {
+            await interaction.reply({ 
+                content: '⏰ **Interacción muy antigua**: Esta interacción es muy antigua.\n\n🔄 **Para continuar**: Usa `/update` para iniciar un nuevo proceso.',
+                flags: 64 
+            });
+        } catch (error) {
+            if (error.code === 10062) {
+                logger.warn(`Interacción expirada para usuario ${interaction.user.tag} (muy antigua)`);
+                return;
+            }
+            logger.error('Error respondiendo a interacción antigua:', error);
+        }
+        return;
+    }
+    
+    // Verificar el tipo de botón para decidir si hacer deferUpdate o no
+    const customId = interaction.customId;
+    const needsDeferUpdate = !customId.includes('status_notes');
+    
+    // Solo hacer deferUpdate si no es un botón que lleva a modal
+    if (needsDeferUpdate) {
+        try {
+            await interaction.deferUpdate();
+        } catch (error) {
+            if (error.code === 10062) {
+                logger.warn(`Interacción de botón expirada para usuario ${interaction.user.tag}`);
+                return;
+            }
+            if (error.code === 40060) {
+                logger.warn(`Interacción de botón ya fue reconocida para usuario ${interaction.user.tag}`);
+                return;
+            }
+            // Para otros errores, no hacer nada para evitar más errores
+            logger.error('Error en deferUpdate (update):', error);
+            return;
+        }
+    }
+    
+    // Helper function para responder correctamente
+    const respondToInteraction = async (content, options = {}) => {
+        try {
+            if (needsDeferUpdate) {
+                await interaction.editReply({ content, ...options });
+            } else {
+                await interaction.reply({ content, ...options, flags: 64 });
+            }
+        } catch (error) {
+            logger.error('Error respondiendo a interacción:', error);
+        }
+    };
+    
     try {
         const customId = interaction.customId;
         
@@ -195,15 +329,15 @@ async function handleButtonInteraction(interaction) {
             const operation = await database.getOperation(operationId);
             
             if (!operation) {
-                await interaction.update({
-                    content: '❌ Error: No se encontró la operación seleccionada.',
+                await respondToInteraction('❌ Error: No se encontró la operación seleccionada.', {
                     components: []
                 });
                 return;
             }
             
-            // Guardar estado
+            // Guardar estado y resetear timeout
             updateInteractionState.set(interaction.user.id, { operationId, operation });
+            resetUpdateUserTimeout(interaction.user.id);
             
             // Crear botones para estados
             const statusRow = new ActionRowBuilder()
@@ -262,7 +396,7 @@ async function handleButtonInteraction(interaction) {
                 timestamp: new Date()
             };
 
-            await interaction.update({ 
+            await interaction.editReply({ 
                 embeds: [embed], 
                 components: [statusRow, slRow] 
             });
@@ -276,13 +410,19 @@ async function handleButtonInteraction(interaction) {
             const userState = updateInteractionState.get(interaction.user.id);
             
             if (!userState || !userState.operationId) {
-                await interaction.update({
-                    content: '❌ Error: No se encontró la operación seleccionada. Por favor, inicia el proceso nuevamente con `/update`.',
+                // Limpiar cualquier estado residual
+                cleanupUpdateUserState(interaction.user.id);
+                
+                await interaction.editReply({
+                    content: '❌ **Sesión expirada**: No se encontró la operación seleccionada. La sesión puede haber expirado.\n\n🔄 **Solución**: Inicia el proceso nuevamente con `/update`.',
                     components: []
                 });
                 return;
             }
 
+            // Resetear timeout ya que el usuario está progresando
+            resetUpdateUserTimeout(interaction.user.id);
+            
             // Manejar botón de notas personalizadas
             if (newStatus === 'NOTES') {
                 // Crear modal para notas personalizadas
@@ -309,8 +449,7 @@ async function handleButtonInteraction(interaction) {
             const updatedOperation = await database.updateOperation(userState.operationId, { status: newStatus });
             
             if (!updatedOperation) {
-                await interaction.update({
-                    content: '❌ Error: No se pudo actualizar la operación.',
+                await respondToInteraction('❌ Error: No se pudo actualizar la operación.', {
                     components: []
                 });
                 return;
@@ -329,10 +468,10 @@ async function handleButtonInteraction(interaction) {
             };
             
             // Limpiar estado del usuario
-            updateInteractionState.delete(interaction.user.id);
+            cleanupUpdateUserState(interaction.user.id);
             
                    // Primero confirmar privadamente
-                   await interaction.update({
+                   await interaction.editReply({
                        content: '✅ **Operación actualizada exitosamente!** Se está publicando al canal...',
                        components: []
                    });
@@ -358,7 +497,7 @@ async function handleButtonInteraction(interaction) {
                     flags: 64 // 64 = EPHEMERAL
                 });
             } else {
-                await interaction.update({
+                await interaction.editReply({
                     content: '❌ Hubo un error procesando tu selección. Por favor, inténtalo de nuevo.',
                     components: []
                 });
@@ -394,9 +533,17 @@ async function handleModalSubmit(interaction) {
         
         const userState = updateInteractionState.get(interaction.user.id);
         
+        // Resetear timeout ya que el usuario está progresando
+        if (userState) {
+            resetUpdateUserTimeout(interaction.user.id);
+        }
+        
         if (!userState || !userState.operationId) {
+            // Limpiar cualquier estado residual
+            cleanupUpdateUserState(interaction.user.id);
+            
             await interaction.editReply({
-                content: '❌ Error: No se encontró la operación seleccionada. Por favor, inicia el proceso nuevamente con `/update`.'
+                content: '❌ **Sesión expirada**: No se encontró la operación seleccionada. La sesión puede haber expirado.\n\n🔄 **Solución**: Inicia el proceso nuevamente con `/update`.'
             });
             return;
         }
@@ -424,12 +571,8 @@ async function handleModalSubmit(interaction) {
         }
 
         // Crear embed personalizado para las notas
-        const assetInfo = getAssetInfo(updatedOperation.asset);
-        const assetName = assetInfo?.name || updatedOperation.asset;
-        const assetEmoji = assetInfo?.emoji || '📊';
-        
         const embed = {
-            title: `📢 ${assetEmoji} ${assetName} - Mensaje Importante`,
+            title: `📢 Mensaje Importante`,
             description: `**${customNotes.trim()}**`,
             color: config.colors.warning,
             timestamp: new Date(),
@@ -439,7 +582,7 @@ async function handleModalSubmit(interaction) {
         };
         
         // Limpiar estado del usuario
-        updateInteractionState.delete(interaction.user.id);
+        cleanupUpdateUserState(interaction.user.id);
         
         // Primero confirmar privadamente
         await interaction.editReply({

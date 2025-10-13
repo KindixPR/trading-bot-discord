@@ -19,6 +19,32 @@ const interactionState = new Map();
 // Sistema de locks por usuario para prevenir conflictos
 const userLocks = new Map();
 
+// Mapa para almacenar timeouts de limpieza por usuario
+const userTimeouts = new Map();
+
+// Función para limpiar el estado de un usuario
+function cleanupUserState(userId) {
+    userLocks.delete(userId);
+    interactionState.delete(userId);
+    userTimeouts.delete(userId);
+    logger.info(`Estado limpiado para usuario ${userId}`);
+}
+
+// Función para resetear el timeout de un usuario
+function resetUserTimeout(userId) {
+    // Limpiar timeout anterior si existe
+    if (userTimeouts.has(userId)) {
+        clearTimeout(userTimeouts.get(userId));
+    }
+    
+    // Establecer nuevo timeout de 5 minutos (300000ms)
+    const timeoutId = setTimeout(() => {
+        cleanupUserState(userId);
+    }, 300000); // 5 minutos en lugar de 30 segundos
+    
+    userTimeouts.set(userId, timeoutId);
+}
+
 const data = new SlashCommandBuilder()
     .setName('entry')
     .setDescription('Crear una nueva operación de trading (Sistema Interactivo)');
@@ -28,23 +54,60 @@ const permissions = ['ADMINISTRATOR'];
 async function execute(interaction) {
     const userId = interaction.user.id;
     
-    // Verificar si el usuario ya tiene un lock activo
-    if (userLocks.has(userId)) {
-        logger.warn(`Usuario ${interaction.user.tag} intentó ejecutar /entry mientras ya está en proceso`);
-        try {
-            await interaction.reply({ content: '⏳ Ya tienes una operación en proceso. Espera a que termine.', flags: 64 });
-        } catch (error) {
-            logger.error('Error respondiendo a usuario bloqueado:', error);
-        }
+    // Verificar si la interacción ya fue respondida
+    if (interaction.replied || interaction.deferred) {
+        logger.warn(`Interacción ya fue respondida para usuario ${interaction.user.tag}`);
         return;
+    }
+    
+    // Deferir respuesta INMEDIATAMENTE - SIN NINGUNA VERIFICACIÓN PREVIA
+    try {
+        await interaction.deferReply({ flags: 64 });
+    } catch (error) {
+        if (error.code === 10062) {
+            logger.warn(`Interacción expirada para usuario ${interaction.user.tag} antes de poder responder`);
+            return;
+        }
+        if (error.code === 40060) {
+            logger.warn(`Interacción ya fue reconocida para usuario ${interaction.user.tag}`);
+            return;
+        }
+        throw error;
+    }
+    
+    // AHORA verificar si el usuario ya tiene un lock activo
+    if (userLocks.has(userId)) {
+        const lockTime = userLocks.get(userId);
+        const timeSinceLock = Date.now() - lockTime;
+        const minutesSinceLock = Math.floor(timeSinceLock / 60000);
+        
+        logger.warn(`Usuario ${interaction.user.tag} intentó ejecutar /entry mientras ya está en proceso (hace ${minutesSinceLock} minutos)`);
+        
+        try {
+            if (timeSinceLock > 300000) { // 5 minutos
+                // Si el lock tiene más de 5 minutos, limpiarlo automáticamente
+                logger.warn(`Limpiando lock antiguo para usuario ${interaction.user.tag} (${minutesSinceLock} minutos)`);
+                userLocks.delete(userId);
+                userTimeouts.delete(userId);
+                await interaction.editReply({ 
+                    content: '🔄 Sesión anterior expirada. Iniciando nueva operación...' 
+                });
+            } else {
+                await interaction.editReply({ 
+                    content: `⏳ Ya tienes una operación en proceso desde hace ${minutesSinceLock} minuto(s). Espera a que termine o usa \`/clear\` si está atascado.` 
+                });
+                return;
+            }
+        } catch (error) {
+            logger.error('Error editando respuesta de usuario bloqueado:', error);
+            return;
+        }
     }
     
     // Crear lock para el usuario
     userLocks.set(userId, Date.now());
     
     try {
-        // Deferir respuesta para evitar timeout
-        await interaction.deferReply({ flags: 64 });
         
         // Iniciar el proceso interactivo con la selección de activo
         const assetRow = new ActionRowBuilder()
@@ -84,41 +147,99 @@ async function execute(interaction) {
         logger.error('Error en comando entry interactivo:', error);
         // NO intentar responder aquí para evitar doble respuesta
     } finally {
-        // Limpiar el lock del usuario después de 30 segundos
-        setTimeout(() => {
-            userLocks.delete(userId);
-            interactionState.delete(userId);
-        }, 30000);
+        // Establecer timeout de limpieza de 5 minutos
+        resetUserTimeout(userId);
     }
 }
 
 // Manejar interacciones de botones para entry
 async function handleButtonInteraction(interaction) {
     const userId = interaction.user.id;
+    const customId = interaction.customId;
     
-    // Verificar si el usuario tiene un lock activo
-    if (!userLocks.has(userId)) {
-        logger.warn(`Usuario ${interaction.user.tag} intentó usar botón sin lock activo`);
+    // Verificar si la interacción ya fue respondida
+    if (interaction.replied || interaction.deferred) {
+        logger.warn(`Interacción de botón ya fue respondida para usuario ${interaction.user.tag}`);
+        return;
+    }
+    
+    // Verificar si la interacción es muy antigua (más de 10 minutos)
+    const interactionAge = Date.now() - interaction.createdTimestamp;
+    if (interactionAge > 600000) { // 10 minutos
+        logger.warn(`Interacción muy antigua para usuario ${interaction.user.tag} (${Math.round(interactionAge / 1000)}s)`);
+        try {
+            await interaction.reply({ 
+                content: '⏰ **Interacción muy antigua**: Esta interacción es muy antigua.\n\n🔄 **Para continuar**: Usa `/entry` para iniciar un nuevo proceso.',
+                flags: 64 
+            });
+        } catch (error) {
+            if (error.code === 10062) {
+                logger.warn(`Interacción expirada para usuario ${interaction.user.tag} (muy antigua)`);
+                return;
+            }
+            logger.error('Error respondiendo a interacción antigua:', error);
+        }
         return;
     }
     
     try {
-        const customId = interaction.customId;
         
         if (customId.startsWith('asset_')) {
-            // Paso 1: Activo seleccionado
+            // Paso 1: Activo seleccionado - verificar lock y deferir
             const asset = customId.replace('asset_', '').toUpperCase();
             
-            if (!isValidAsset(asset)) {
-                await interaction.update({
-                    content: '❌ Error: Activo no válido.',
-                    components: []
-                });
+            // Verificar si el usuario tiene un lock activo
+            if (!userLocks.has(userId)) {
+                logger.warn(`Usuario ${interaction.user.tag} intentó usar botón sin lock activo - sesión expirada`);
+                try {
+                    await interaction.reply({ 
+                        content: '⏰ **Sesión expirada**: Tu sesión de creación de operación ha expirado.\n\n🔄 **Para continuar**: Usa `/entry` para iniciar un nuevo proceso.',
+                        flags: 64 
+                    });
+                } catch (error) {
+                    if (error.code === 10062) {
+                        logger.warn(`Interacción expirada para usuario ${interaction.user.tag} (sesión ya expirada)`);
+                        return;
+                    }
+                    // Si hay otro error, no hacer nada para evitar más errores
+                    logger.error('Error respondiendo a usuario sin lock:', error);
+                }
                 return;
             }
             
-            // Guardar estado
+            if (!isValidAsset(asset)) {
+                try {
+                    await interaction.reply({ content: '❌ Error: Activo no válido.', flags: 64 });
+                } catch (error) {
+                    if (error.code === 10062) {
+                        logger.warn(`Interacción expirada para usuario ${interaction.user.tag} (activo inválido)`);
+                        return;
+                    }
+                    throw error;
+                }
+                return;
+            }
+            
+            // Deferir para actualizar el mensaje
+            try {
+                await interaction.deferUpdate();
+            } catch (error) {
+                if (error.code === 10062) {
+                    logger.warn(`Interacción expirada para usuario ${interaction.user.tag} (defer asset) - sesión muy antigua`);
+                    return;
+                }
+                if (error.code === 40060) {
+                    logger.warn(`Interacción ya reconocida para usuario ${interaction.user.tag} (defer asset)`);
+                    return;
+                }
+                // Para otros errores, no hacer nada para evitar más errores
+                logger.error('Error en deferUpdate (asset):', error);
+                return;
+            }
+            
+            // Guardar estado y resetear timeout
             interactionState.set(interaction.user.id, { asset });
+            resetUserTimeout(interaction.user.id);
             
             // Crear botones para tipo de orden
             const typeRow = new ActionRowBuilder()
@@ -144,7 +265,7 @@ async function handleButtonInteraction(interaction) {
                 timestamp: new Date()
             };
 
-            await interaction.update({ 
+            await interaction.editReply({ 
                 embeds: [embed], 
                 components: [typeRow]
             });
@@ -153,29 +274,69 @@ async function handleButtonInteraction(interaction) {
 
         } else if (customId.startsWith('type_')) {
             
-            // Paso 2: Tipo seleccionado
+            // Paso 2: Tipo seleccionado - verificar lock y mostrar modal
             const orderType = customId.replace('type_', '');
+            
+            // Verificar si el usuario tiene un lock activo
+            if (!userLocks.has(userId)) {
+                logger.warn(`Usuario ${interaction.user.tag} intentó usar botón sin lock activo - sesión expirada`);
+                try {
+                    await interaction.reply({ 
+                        content: '⏰ **Sesión expirada**: Tu sesión de creación de operación ha expirado.\n\n🔄 **Para continuar**: Usa `/entry` para iniciar un nuevo proceso.',
+                        flags: 64 
+                    });
+                } catch (error) {
+                    if (error.code === 10062) {
+                        logger.warn(`Interacción expirada para usuario ${interaction.user.tag} (sesión ya expirada)`);
+                        return;
+                    }
+                    // Si hay otro error, no hacer nada para evitar más errores
+                    logger.error('Error respondiendo a usuario sin lock:', error);
+                }
+                return;
+            }
+            
             const userState = interactionState.get(interaction.user.id);
             
             if (!userState || !userState.asset) {
-                await interaction.update({
-                    content: '❌ Error: No se encontró el activo seleccionado. Por favor, inicia el proceso nuevamente con `/entry`.',
-                    components: []
-                });
+                // Limpiar cualquier estado residual
+                cleanupUserState(interaction.user.id);
+                
+                try {
+                    await interaction.reply({ 
+                        content: '❌ **Sesión expirada**: No se encontró el activo seleccionado. La sesión puede haber expirado.\n\n🔄 **Solución**: Inicia el proceso nuevamente con `/entry`.',
+                        flags: 64 
+                    });
+                } catch (error) {
+                    if (error.code === 10062) {
+                        logger.warn(`Interacción expirada para usuario ${interaction.user.tag} (sesión expirada)`);
+                        return;
+                    }
+                    throw error;
+                }
                 return;
             }
             
             if (!isValidOrderType(orderType)) {
-                await interaction.update({
-                    content: '❌ Error: Tipo de orden no válido.',
-                    components: []
-                });
+                try {
+                    await interaction.reply({ 
+                        content: '❌ Error: Tipo de orden no válido.',
+                        flags: 64 
+                    });
+                } catch (error) {
+                    if (error.code === 10062) {
+                        logger.warn(`Interacción expirada para usuario ${interaction.user.tag} (tipo inválido)`);
+                        return;
+                    }
+                    throw error;
+                }
                 return;
             }
             
-            // Actualizar estado
+            // Actualizar estado y resetear timeout
             userState.orderType = orderType;
             interactionState.set(interaction.user.id, userState);
+            resetUserTimeout(interaction.user.id);
             
             // Crear modal para detalles de la operación
             const modal = new ModalBuilder()
@@ -236,8 +397,16 @@ async function handleButtonInteraction(interaction) {
 
             modal.addComponents(firstActionRow, secondActionRow, thirdActionRow, fourthActionRow, fifthActionRow);
 
-            // Mostrar modal INMEDIATAMENTE después del deferUpdate
-            await interaction.showModal(modal);
+            // Mostrar modal directamente
+            try {
+                await interaction.showModal(modal);
+            } catch (error) {
+                if (error.code === 10062) {
+                    logger.warn(`Interacción expirada para usuario ${interaction.user.tag} (mostrar modal)`);
+                    return;
+                }
+                throw error;
+            }
 
             logger.info(`Usuario ${interaction.user.tag} seleccionó tipo: ${orderType} para ${userState.asset}`);
 
@@ -273,8 +442,11 @@ async function handleModalSubmit(interaction) {
         const userState = interactionState.get(interaction.user.id);
         
         if (!userState || !userState.asset || !userState.orderType) {
+            // Limpiar cualquier estado residual
+            cleanupUserState(interaction.user.id);
+            
             await interaction.editReply({
-                content: '❌ Error: No se encontró la información de la operación. Por favor, inicia el proceso nuevamente con `/entry`.'
+                content: '❌ **Sesión expirada**: La información de la operación se perdió. Esto puede ocurrir si el proceso toma demasiado tiempo.\n\n🔄 **Solución**: Inicia el proceso nuevamente con `/entry` y completa los pasos más rápidamente.'
             });
             return;
         }
@@ -341,9 +513,12 @@ async function handleModalSubmit(interaction) {
         });
 
         // Guardar en la base de datos
+        logger.info(`Guardando operación: ${JSON.stringify(operationData)}`);
         const savedOperation = await database.createOperation(operationData);
+        logger.info(`Operación guardada: ${savedOperation ? 'SÍ' : 'NO'}`);
         
         if (!savedOperation) {
+            logger.error('Error: No se pudo guardar la operación');
             await interaction.editReply({
                 content: '❌ Error: No se pudo guardar la operación.'
             });
@@ -354,8 +529,7 @@ async function handleModalSubmit(interaction) {
         const embed = createTradeEntryEmbed(operationData);
 
         // Limpiar estado del usuario y lock
-        interactionState.delete(interaction.user.id);
-        userLocks.delete(interaction.user.id);
+        cleanupUserState(interaction.user.id);
 
         // Primero confirmar privadamente
         await interaction.editReply({
